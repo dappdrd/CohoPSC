@@ -7,23 +7,12 @@ library(ggplot2)
 #used for shiny
 library(shiny)
 library(shinyFiles)
-#for drop box interfacing
 library(rdrop2)
-#for data frame manipulation
-library(plyr)
 
 token <- readRDS("droptoken.rds")
 drop_acc(dtoken = token)
 
 Password <<- "rjdio"
-
-FinalRunList <<- c("BASE.Cmd", "CB86.Cmd", "CB87.Cmd", "CB88.Cmd", "CB89.Cmd", "CB90.Cmd", "CB91.Cmd", "CB92.Cmd", "CB93.Cmd", "CB94.Cmd", "CB95.Cmd",
-                  "CB96.Cmd", "CB97.Cmd", "BK98 w UF H&W", "BK99 w UF H&W", "BK00 w UF H&W", "BK01 w UF H&W Reload Catches", "BK02 w UF H&W Reload catches",
-                  "BK03 w catches and BC cohorts", "BK04 w catches BCcohorts", "BK05 w catches and BC cohorts", "BK06 w catches and BC cohorts", 
-                  "BK07 catches and BC cohorts", "BK08.cmd", "BK09 New CNR", "bk10PSCFeb14", "Coho2011Post_PSC 2013", "Coho2012Post_PSC SSNPx2 Q Aug 22 BC MSF corrected",
-                  "bk 2013 Feb 11 2015 adjust GB recruits", "bc-BK2014 w TAMM inputs final#2", "bc-bkCoho2015 Final")
-
-test <<- data.frame(Test = 1, test2 = 4)
 
 shinyServer(
 function(input, output, session){
@@ -67,9 +56,12 @@ function(input, output, session){
        return(NULL)
      isolate({
        
-       RunIDTab = read.csv("https://dl.dropboxusercontent.com/s/ntgampj1d8dyp26/RunList.csv?dl=1")
-       TESTVAR <<- RunIDTab$RunName[3]
+       #these 2 lines are for code testing purposes and mean nothing.
+       test <<- data.frame(Test = 1, test2 = 2)
+       write.csv(test, file = "MyData.csv")
        
+       #fram.conn <- odbcConnectAccess("./FramVS2-PSC-Coho-Backwards-for 2015.mdb")
+       #cohorttab <- sqlQuery(fram.conn, 'select * from Cohort')
        
      })
    })
@@ -85,18 +77,10 @@ function(input, output, session){
     #password is correct
     else{
       #This is set by the user in ui.R from the select input button in the side panel
-      graphic <- input$graphic
-      
-      if (graphic == "None"){
-        plot_jpeg('Chinook.jpg')
-      }
-      else if (graphic == "Table 1"){
-        renderDataTable(test)
-      }
-      else {
-        plot(1, type="n", xlab="", ylab="", xlim=c(0, 2), ylim=c(0, 2))
-        text(TESTVAR, x = 1, y = 1)
-      }
+      Stock <- input$Stock
+    
+      plot(1, type="n", xlab="", ylab="", xlim=c(0, 2), ylim=c(0, 2))
+      text(Stock, x = 1, y = 1)
     }
   })
 }

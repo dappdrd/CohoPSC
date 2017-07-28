@@ -1,0 +1,59 @@
+PrimaryKey,RunID,SpeciesName,RunName,RunTitle,BasePeriodID,RunComments,CreationDate,ModifyInputDate,RunTimeDate,RunYear
+116,2,COHO,CB86.Cmd,Base Period Command File,4,MSM Type Base Period Command File,5/18/2010 9:16,1/1/2001 0:00,10/11/2011 15:53,1986
+117,3,COHO,CB87.Cmd,Base Period Command File,5,MSM Type Base Period Command File,5/18/2010 9:16,1/1/2001 0:00,10/11/2011 15:54,1987
+118,4,COHO,CB88.Cmd,Base Period Command File,6,MSM Type Base Period Command File,5/18/2010 9:16,1/1/2001 0:00,10/11/2011 15:55,1988
+119,5,COHO,CB89.Cmd,Base Period Command File,7,MSM Type Base Period Command File,5/18/2010 9:17,1/1/2001 0:00,10/11/2011 15:55,1989
+120,6,COHO,CB90.Cmd,Base Period Command File,8,MSM Type Base Period Command File,5/18/2010 9:17,1/1/2001 0:00,10/11/2011 15:56,1990
+121,7,COHO,CB91.Cmd,Base Period Command File,9,MSM Type Base Period Command File,5/18/2010 9:17,1/1/2001 0:00,10/11/2011 15:56,1991
+122,8,COHO,CB92.Cmd,Base Period Command File,10,MSM Type Base Period Command File,5/18/2010 9:17,1/1/2001 0:00,10/11/2011 15:57,1992
+123,9,COHO,CB93.Cmd,Base Period Command File,11,MSM Type Base Period Command File,5/18/2010 9:17,1/1/2001 0:00,10/11/2011 15:58,1993
+124,10,COHO,CB94.Cmd,Base Period Command File,12,MSM Type Base Period Command File,5/18/2010 9:18,1/1/2001 0:00,10/11/2011 15:58,1994
+125,11,COHO,CB95.Cmd,Base Period Command File,13,MSM Type Base Period Command File,5/18/2010 9:18,1/1/2001 0:00,10/11/2011 15:58,1995
+126,12,COHO,CB96.Cmd,Base Period Command File,14,MSM Type Base Period Command File,5/18/2010 9:18,1/1/2001 0:00,10/11/2011 15:59,1996
+127,13,COHO,CB97.Cmd,Base Period Command File,15,MSM Type Base Period Command File,5/18/2010 16:53,1/1/2001 0:00,10/11/2011 15:59,1997
+128,14,COHO,BK99 w UF H&W,FRAM Post-Season Command File (Backwards FRAM),3,Use this file with FRAM Post-Season Routine,2/17/2011 17:13,10/13/2011 15:03,10/13/2011 15:02,1999
+129,15,COHO,BK98 w UF H&W,FRAM Post-Season Command File (Backwards FRAM),3,Use this file with FRAM Post-Season Routine,2/17/2011 17:15,10/13/2011 15:08,10/13/2011 15:08,1998
+130,16,COHO,BK01 w UF H&W Reload Catches,FRAM Post-Season Command File (Backwards FRAM),3,Use this file with FRAM Post-Season Routine,2/22/2011 16:25,10/13/2011 14:50,10/13/2011 14:50,2001
+131,17,COHO,BK02 w UF H&W Reload catches,FRAM Post-Season Command File (Backwards FRAM),3,Use this file with FRAM Post-Season Routine,2/22/2011 16:31,10/13/2011 14:45,10/13/2011 14:45,2002
+132,18,COHO,BK03 w catches and BC cohorts,FRAM Post-Season Command File (Backwards FRAM),3,Use this file with FRAM Post-Season Routine,2/24/2011 20:32,10/13/2011 14:38,10/13/2011 14:38,2003
+133,19,COHO,BK04 w catches BCcohorts,FRAM Post-Season Command File (Backwards FRAM),3,Use this file with FRAM Post-Season Routine,2/24/2011 20:41,10/13/2011 14:31,3/3/2015 11:15,2004
+134,20,COHO,BK05 w catches and BC cohorts,FRAM Post-Season Command File (Backwards FRAM) w correction to Col Lates,3,Use this file with FRAM Post-Season Routine,2/24/2011 20:47,1/12/2012 16:54,3/3/2015 11:12,2005
+135,21,COHO,BK06 w catches and BC cohorts,Backwards-2006 Post-Season with Catches and Escapements Updated,3,2006 run in 2008with post-season sport catches and escapements updated from 06p1 (which had only some catches updated).,2/25/2011 11:44,10/13/2011 12:51,3/3/2015 11:04,2006
+136,22,COHO,BK07 catches and BC cohorts,Backwards-PSC 2007 Post-season run catches and escapement,3,Final 2007 preseason FRAM with post-season observed catches for WA nettroll&ocean sportand Canadian fisheries.  JH PSC Edit 2009-02-12.,2/25/2011 11:51,10/11/2011 14:51,3/3/2015 10:57,2007
+139,25,COHO,BK00 w UF H&W,FRAM Post-Season Command File (Backwards FRAM),3,Use this file with FRAM Post-Season Routine,2/17/2011 17:11,10/13/2011 14:56,10/13/2011 14:56,2000
+140,26,COHO,BASE.Cmd,Base Period Command File,3,MSM Type Base Period Command File,1/18/2011 14:37,1/1/2001 0:00,10/11/2011 15:59,1985
+141,27,COHO,BK09 New CNR,Backwards FRAM postseason catches and escapements US and BC; prelim final,3,US and BC 2009 forecasts (3/31/09 update).  Note that 2007 post-season fishery scalars are being used for Canadian fisheries.   Added Puget Sound fishery inputswith marine MSF sport values entered as scalars.  North of Falcon nontr at 210k sel w no 4b.  S,3/1/2011 10:28,10/13/2011 12:21,3/3/2015 10:50,2009
+142,28,COHO,BK08.cmd,Backwards-2008 with Nov RMIS for some BC catches.,3,Loaded Oct 2009 with postseason esc. and catches from Jon Anderson/Jeff Haymes spreasdsheets. Used Feb 2009 OPITT numbers for Columbia River and Oregon Coast; Jeffs runsizes were much lower than these and wonder if they did not include damcounts.,10/10/2011 11:17,10/13/2011 12:35,3/3/2015 10:54,2008
+143,29,COHO,bk10PSCFeb14,"Backwards 2010 for 2012 PSC CoTC Feb 14, 2012",3,Command File PS10.cmd,2/14/2012 10:29,2/14/2012 10:29,3/3/2015 10:46,2010
+149,31,COHO,Coho2011Post_PSC 2013,Coho 2011 PostSeason_PSC Feb 13 2013,3,"Collaborative US/Canadian inputs.
+
+Modify Young Bay Net fishery scalar, Port Gamble Net Pen fishery scalar, removed Alberni Spt from WCVI fishery",2/13/2013 15:27,1/1/2001 0:00,3/3/2015 10:37,2011
+160,38,COHO,Coho2012Post_PSC SSNPx2 Q Aug 22 BC MSF corrected,Coho 2012 PostSeason_PSC Aug 22 2014,3,"Start is Feb 11 late night version from Jim Packer. Modifying SSNP initial Recruit Scalars by 2 times to see if Ers converge to Andy's result from last night.  Do BK iterations for result.
+Got Quinault R Hat and Wild escapements on Feb 12 and are redoing ",2/7/2015 11:55,1/1/2001 0:00,3/3/2015 10:32,2012
+174,50,COHO,OLD,bk 2013 Final FW Fraser stock specific morts included,16,"Steps to build backwards FRAM run for postseason 2013.
+1) start with Final coho1323
+2) load with mortality input: Landed, MSF Landed, CNR
+3) loaded with Esc targets
+4) adjustments to 9A and SSNP preseason Recruit Scalars, postseason landed divided by pres",2/11/2015 17:33,2/11/2015 17:36,2/11/2015 17:37,2013
+175,51,COHO,bk 2013 Feb 11 2015 adjust GB recruits,bk 2013 Final increased Georgia Basin recruit scalars per regional survival increases,16,"Steps to build backwards FRAM run for postseason 2013.
+1) start with Final coho1323
+2) load with mortality input: Landed, MSF Landed, CNR
+3) loaded with Esc targets
+4) adjustments to 9A and SSNP preseason Recruit Scalars, postseason landed divided by pres",6/11/2015 15:44,6/11/2015 15:44,6/11/2015 15:48,2013
+178,52,COHO,bc-BK2014 w TAMM inputs final#2,Postseason 2014 final,16,"Canadian post-season 2012 sport fishery scalars and 2010 net fishery scalars and 2012 CNR inputs. Added A20 test fishery impacts.
+  
+US stocks with 2014 abundance scalars. BC stocks with final 2014 abundance scalars. Queets stock ER sclars added for Quina",2/10/2016 10:48,2/23/2017 11:32,2/11/2016 11:50,2014
+182,53,COHO,bc-bkCoho2015 Final,2015 Postseason step 7 Feb 15th,16,"BK2015 step 1 includes using ETRS as esc for Queets stocks and Col R stocks.  This requires zero catch for Queets freshwater fisheries and for Buoy 10.
+Step 2 includes landed catch for Buoy 10 and Queets fw net and sport. Note Aug catch added to be part o",2/15/2017 15:33,2/23/2017 11:46,1/1/2001 0:00,2015
+183,54,COHO,OLD,2015 Postseason step 7 Feb 15th,16,"BK2015 step 1 includes using ETRS as esc for Queets stocks and Col R stocks.  This requires zero catch for Queets freshwater fisheries and for Buoy 10.
+Step 2 includes landed catch for Buoy 10 and Queets fw net and sport. Note Aug catch added to be part o",2/15/2017 15:33,2/23/2017 11:58,2/23/2017 11:58,2015
+199,55,COHO,OLD,2015 Postseason step 7 Feb 15th,16,"BK2015 step 1 includes using ETRS as esc for Queets stocks and Col R stocks.  This requires zero catch for Queets freshwater fisheries and for Buoy 10.
+Step 2 includes landed catch for Buoy 10 and Queets fw net and sport. Note Aug catch added to be part o",2/15/2017 15:33,2/23/2017 11:58,2/23/2017 11:58,2015
+200,56,COHO,OLD,2015 Postseason step 7 Feb 15th,16,"BK2015 step 1 includes using ETRS as esc for Queets stocks and Col R stocks.  This requires zero catch for Queets freshwater fisheries and for Buoy 10.
+Step 2 includes landed catch for Buoy 10 and Queets fw net and sport. Note Aug catch added to be part o",2/15/2017 15:33,2/23/2017 11:58,2/23/2017 11:58,2015
+201,57,COHO,OLD,2015 Postseason step 7 Feb 15th,16,"BK2015 step 1 includes using ETRS as esc for Queets stocks and Col R stocks.  This requires zero catch for Queets freshwater fisheries and for Buoy 10.
+Step 2 includes landed catch for Buoy 10 and Queets fw net and sport. Note Aug catch added to be part o",2/15/2017 15:33,2/23/2017 11:58,2/23/2017 11:58,2015
+202,58,COHO,OLD,2015 Postseason step 7 Feb 15th,16,"BK2015 step 1 includes using ETRS as esc for Queets stocks and Col R stocks.  This requires zero catch for Queets freshwater fisheries and for Buoy 10.
+Step 2 includes landed catch for Buoy 10 and Queets fw net and sport. Note Aug catch added to be part o",2/15/2017 15:33,2/23/2017 11:46,1/1/2001 0:00,2015
+203,59,COHO,OLD,2015 Postseason step 7 Feb 15th,16,"BK2015 step 1 includes using ETRS as esc for Queets stocks and Col R stocks.  This requires zero catch for Queets freshwater fisheries and for Buoy 10.
+Step 2 includes landed catch for Buoy 10 and Queets fw net and sport. Note Aug catch added to be part o",2/15/2017 15:33,2/23/2017 11:46,1/1/2001 0:00,2015

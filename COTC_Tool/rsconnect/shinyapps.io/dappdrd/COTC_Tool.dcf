@@ -3,9 +3,9 @@ title: COTC_Tool
 account: dappdrd
 server: shinyapps.io
 appId: 195062
-bundleId: 914455
+bundleId: 915718
 url: https://dappdrd.shinyapps.io/COTC_Tool/
-when: 1500936061.11386
+when: 1501016373.95908
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: Chinook.jpg|DBConnectionTesting.R|FramBaseCheck.Txt|FramVS2CohoBaseandBackwards86-09.mdb|mail testing.R|test.xlsx
+ignoredFiles: DBConnectionTesting.R|Dropbox testing.R|FramBaseCheck.Txt|FramVS2-PSC-Coho-Backwards-for 2015.ldb|FramVS2CohoBaseandBackwards86-09.mdb|mail testing.R|server_USABLE.R|temp.mdb|test.xlsx|ui_USABLE.R

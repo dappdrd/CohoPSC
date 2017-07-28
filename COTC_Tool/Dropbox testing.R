@@ -46,3 +46,62 @@ send.mail(from = "derek.dapp.dfw@gmail.com",
           # file.names = c("Download log.log", "Upload log.log", "DropBox File.rtf"), # optional parameter
           file.descriptions = c("Random picture", "Random csv"), # optional parameter
           debug = TRUE)
+
+
+
+#used for connecting to db
+library(RODBC)
+library(ImportExport)
+
+db <- drop_get("FramVS2-PSC-Coho-Backwards-for 2015.mdb", overwrite = FALSE)
+
+db <- drop_get("Chinook.jpg", overwrite = TRUE, progress = TRUE)
+
+db <- drop_get("testfile.csv", overwrite = TRUE, progress = TRUE)
+
+test = read.csv("https://dl.dropboxusercontent.com/s/67cekqliabs52ja/testfile.csv?dl=1")
+
+Table <-  access_import("https://www.dropbox.com/s/1vz5ev538tcgcz2/FramVS2-PSC-Coho-Backwards-for%202015.mdb?raw=1",table_names = "TimeStep")
+
+fram.conn <- odbcConnectAccess("https://www.dropbox.com/s/1vz5ev538tcgcz2/FramVS2-PSC-Coho-Backwards-for%202015.mdb?dl=1")
+cohorttab <- sqlQuery(fram.conn, 'select * from Cohort')
+
+
+library(pool)
+library(dplyr)
+
+conn <- dbConnect(
+  drv = RMySQL::MySQL(),
+  dbname = "shinydemo",
+  host = "https://www.dropbox.com/s/1vz5ev538tcgcz2/FramVS2-PSC-Coho-Backwards-for%202015.mdb?raw=1")
+
+library(DBI)
+conn <- dbConnect(
+  drv = RMySQL::MySQL(),
+  dbname = "shinydemo",
+  host = "https://www.dropbox.com/s/1vz5ev538tcgcz2/")
+
+
+library(RMySQL)
+
+options(mysql = list(
+  "host" = "127.0.0.1",
+  "port" = 3306,
+  "user" = "root",
+  "password" = ""
+))
+
+databaseName <- "FramVS2-PSC-Coho-Backwards-for 2015.mdb"
+table <- "Cohort"
+
+# Connect to the database
+db <- dbConnect(MySQL(), dbname = databaseName, host = options()$mysql$host, 
+                  port = options()$mysql$port, user = options()$mysql$user, 
+                  password = options()$mysql$password)
+
+
+temp <- download.file('https://www.dropbox.com/s/1vz5ev538tcgcz2/FramVS2-PSC-Coho-Backwards-for%202015.mdb?raw=1',
+              destfile="temp.mdb",
+              method="auto")
+
+fram.conn <- odbcConnectAccess('https://www.dropbox.com/s/1vz5ev538tcgcz2/FramVS2-PSC-Coho-Backwards-for%202015.mdb?raw=1')

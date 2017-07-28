@@ -8,8 +8,6 @@ library(ggplot2)
 library(shiny)
 library(shinyFiles)
 library(rdrop2)
-#for data frame manipulation
-library(plyr)
 
 token <- readRDS("droptoken.rds")
 drop_acc(dtoken = token)
@@ -28,11 +26,11 @@ shinyServer(
       
       textInput("PasswordAdd", "Please enter password to access program functions", ""),
       #Adds a dropdown box
-      actionButton("DataProcessButton",label = "Process data"),
-      selectInput("graphic", "Please graphic to display",
-                  choices = c("None", "Table 1", "Figure 1")),
+      selectInput("Stock", "Please Select a Stock",
+                  choices = c("Nooksack Springs", "Dungeness")),
     
 
+      actionButton("DataProcessButton",label = "Process data"),
       textInput("EmailAdd", "Email to send to:", ""),
       actionButton("EmailButton",label = "Send data to my email")
     ),
