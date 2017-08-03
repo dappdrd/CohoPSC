@@ -35,7 +35,8 @@ shinyServer(
       #Adds a dropdown box
       actionButton("DataProcessButton",label = "Process data"),
       selectInput("graphic", "Please choose a figure to display",
-                  choices = c("None", "Figure 4.1", "Figure 4.2", "Figure 4.3", "Figure 5.1")),
+                  choices = c("None", "Figure 4.1", "Figure 4.2", "Figure 4.3", "Figure 5.1", "Figure 7.1", "Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5",
+                              "Figure 7.6", "Figure 7.7", "Figure 7.8", "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13")),
     
       selectInput("table", "Please choose a table to display",
                   choices = c("None","Table 4.1", "Table 4.2", "Testing Table")),

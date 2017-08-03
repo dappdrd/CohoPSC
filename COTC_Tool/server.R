@@ -93,8 +93,23 @@ function(input, output, session){
                                   "https://dl.dropboxusercontent.com/s/9t2ozw5ir86covl/Figure%204.3.jpg", 
                                   "https://dl.dropboxusercontent.com/s/3cmw8yda3677ls5/Table%204.1%20html.txt",
                                   "https://dl.dropboxusercontent.com/s/cih9ma0vtly8a72/Table%204.2%20html.txt",
-                                  "https://dl.dropboxusercontent.com/s/4g48qbf6kstpb6d/Figure%205.1.jpg"),
-                 file.descriptions = c("Figure 4.1", "Figure 4.2", "Figure 4.3", "Table 4.1","Table 4.2", "Figure 5.1"), # optional parameter
+                                  "https://dl.dropboxusercontent.com/s/4g48qbf6kstpb6d/Figure%205.1.jpg",
+                                  "https://dl.dropboxusercontent.com/s/kuhyt00y4kr2ivf/Fig71.jpg",
+                                  "https://dl.dropboxusercontent.com/s/kqz9jx32h6aiek0/Fig72.jpg",
+                                  "https://dl.dropboxusercontent.com/s/tuya8vhn9ayrg1f/Fig73.jpg",
+                                  "https://dl.dropboxusercontent.com/s/nvx6tjaqat1wc8n/Fig74.jpg",
+                                  "https://dl.dropboxusercontent.com/s/3uk4kktxlt9kdtp/Fig75.jpg",
+                                  "https://dl.dropboxusercontent.com/s/dnal6uhxcyughbe/Fig76.jpg",
+                                  "https://dl.dropboxusercontent.com/s/bst9kdx5pnya8zi/Fig77.jpg",
+                                  "https://dl.dropboxusercontent.com/s/8vvmquab1z6o7od/Fig78.jpg",
+                                  "https://dl.dropboxusercontent.com/s/izk583dv0v39vi9/Fig79.jpg",
+                                  "https://dl.dropboxusercontent.com/s/rwvdcqwk410mrrv/Fig710.jpg",
+                                  "https://dl.dropboxusercontent.com/s/tri09bacabye2kq/Fig711.jpg",
+                                  "https://dl.dropboxusercontent.com/s/p8t646v5rwnqaga/Fig712.jpg",
+                                  "https://dl.dropboxusercontent.com/s/f0l65a9pit6fi0d/Fig713.jpg"),
+                 file.descriptions = c("Figure 4.1", "Figure 4.2", "Figure 4.3", "Table 4.1","Table 4.2", "Figure 5.1", "Figure 7.1",
+                                       "Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5", "Figure 7.6", "Figure 7.7", "Figure 7.8",
+                                       "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13"), # optional parameter
                  debug = TRUE)
        })
      })
@@ -117,7 +132,8 @@ function(input, output, session){
                   "RunComments", "CreationDate", "ModifyInputDate", "RunTimeDate")
           RunIDTab<- RunIDTab[ , !(names(RunIDTab) %in% Drops)]
        
-       
+          YearList<<- unique(RunIDTab$RunYear)
+          YearList <<- sort(YearList, decreasing = FALSE)
        
        
           incProgress(2/4, detail = "Loading Escapement Table")
@@ -214,6 +230,14 @@ function(input, output, session){
             #Sums everything by run year
             StockMortSUSRows <- ddply(SubMortDFSUS, "RunYear",  numcolwise(sum))
             
+            #Finds out years with 0s; add row so a zero gets merged in later
+            for (j in YearList[1]:YearList[length(YearList)]){
+              if(!(j %in% StockMortSUSRows$RunYear)){
+                newrow <- data.frame(RunYear = j, SUSMort = 0)
+                StockMortSUSRows <- rbind(StockMortSUSRows, newrow)
+              }
+            }
+            
             #Subsets Mortality DF to get stock/only CA fisheries
             SubMortDFCA <- subset(MortTab, StockID %in% FRAMStks & FisheryID > 166 & FisheryID < 194)
             
@@ -223,6 +247,14 @@ function(input, output, session){
             
             StockMortCARows <- ddply(SubMortDFCA, "RunYear",  numcolwise(sum))
             
+            #Finds out years with 0s; add row so a zero gets merged in later
+            for (j in YearList[1]:YearList[length(YearList)]){
+              if(!(j %in% StockMortCARows$RunYear)){
+                newrow <- data.frame(RunYear = j, CAMort = 0)
+                StockMortCARows <- rbind(StockMortCARows, newrow)
+              }
+            }
+            
             #Subsets Mortality DF to get stock/only AK fisheries
             SubMortDFAK <- subset(MortTab, StockID %in% FRAMStks & FisheryID > 193)
             
@@ -231,6 +263,14 @@ function(input, output, session){
             colnames(SubMortDFAK)[ColIndex] <- "AKMort"
             
             StockMortAKRows <- ddply(SubMortDFAK, "RunYear",  numcolwise(sum))
+            
+            #Finds out years with 0s; add row so a zero gets merged in later
+            for (j in YearList[1]:YearList[length(YearList)]){
+              if(!(j %in% StockMortAKRows$RunYear)){
+                newrow <- data.frame(RunYear = j, AKMort = 0)
+                StockMortAKRows <- rbind(StockMortAKRows, newrow)
+              }
+            }
             
             #Merge in SUS,CA, AK
             StockMortRows <- merge(StockMortRows, StockMortSUSRows, by= "RunYear")
@@ -377,6 +417,96 @@ function(input, output, session){
           
           drop_upload(filePath)
           
+          #DF used to set up figure orders
+          OrdRow1 <- data.frame(name = "Fig71", Stock = "Lower Fraser", order = 1)
+          OrdRow2 <- data.frame(name = "Fig72", Stock = "Interior Fraser", order = 2)
+          OrdRow3 <- data.frame(name = "Fig73", Stock = "Georgia Strait ML", order = 3)
+          OrdRow4 <- data.frame(name = "Fig74", Stock = "Georgia Strait VI", order = 4)
+          OrdRow5 <- data.frame(name = "Fig75", Stock = "Skagit", order = 5)
+          OrdRow6 <- data.frame(name = "Fig76", Stock = "Stillaguamish", order = 6)
+          OrdRow7 <- data.frame(name = "Fig77", Stock = "Snohomish", order = 7)
+          OrdRow8 <- data.frame(name = "Fig78", Stock = "Hood Canal", order = 8)
+          OrdRow9 <- data.frame(name = "Fig79", Stock = "US Strait JDF", order = 9)
+          OrdRow10 <- data.frame(name = "Fig710", Stock = "Quillayute", order = 10)
+          OrdRow11 <- data.frame(name = "Fig711", Stock = "Hoh", order = 11)
+          OrdRow12 <- data.frame(name = "Fig712", Stock = "Queets", order = 12)
+          OrdRow13 <- data.frame(name = "Fig713", Stock = "Grays Harbor", order = 13)
+          
+          
+          OrderDF <<- rbind(OrdRow1,OrdRow2,OrdRow3,OrdRow4,OrdRow5,OrdRow6,OrdRow7,OrdRow8,OrdRow9,OrdRow10,OrdRow11,OrdRow12,OrdRow13)
+          
+          #Figures 7.1-7.13
+          for (i in 1:length(StockList)){
+            #Switching to local solves issues with assign; you also have to do i <-i and pos =1 in the assign function for this to work
+            local ({
+              
+              i <- i
+              #Gets figure name from the order df
+              Figname <- as.character(subset(OrderDF, Stock == StockList[i])[1,1])
+            
+              Fig7DF <- subset(MainDataDF, Stock == StockList[i])
+            
+              #if in a Canadian stock, do not include 1998-2003, 
+              if (StockList[i] == "Lower Fraser" | StockList[i] == "Interior Fraser" | StockList[i] == "Georgia Strait ML" | StockList[i] == "Georgia Strait VI"){
+                Fig7DF$Escapement[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
+                Fig7DF$CAMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
+                Fig7DF$SUSMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
+                Fig7DF$AKMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
+              }
+            
+              #Get morts in terms of ER
+              Fig7DF$USER <- (Fig7DF$SUSMort + Fig7DF$AKMort)/Fig7DF$OceanCohort
+              Fig7DF$CAER <- Fig7DF$CAMort/Fig7DF$OceanCohort
+            
+              #Combine the datasets into a usable format for stacked barplots
+              Melted7DF <- melt(Fig7DF, id.vars = "RunYear", measure.vars = c("CAER", "USER"))
+            
+              #DF with just escapements
+              Fig7Esc <- Fig7DF[ , (names(Fig7DF) %in% c("RunYear", "Escapement"))]
+            
+              #adds in escapements to the DF
+              Melted7DF <- merge(Melted7DF, Fig7Esc , by= "RunYear")
+            
+              #Gets readjustment scale
+              maxy <- sort(Fig7Esc$Escapement, decreasing = TRUE)[1] +500
+            
+              #create variable name for later use
+              assign(Figname, ggplot(Melted7DF, aes(x = RunYear, y = value, fill = variable))+
+                     geom_bar(stat = "identity", colour = "black") + theme_bw()+
+                     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                           panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+                     theme(text = element_text(size=16))+
+                     xlab('Catch Year') + ylab('Total Exploitation Rate') +
+                     theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+                     scale_fill_manual("legend", values = c("USER" = "gray47", "CAER" = "gray87"), labels = c("Canada", "US"))+
+                     theme(legend.title=element_blank())+
+                     #Second axis must get rescaled according to the scaling below
+                     scale_y_continuous(lim = c(0,1),sec.axis = sec_axis(~.*maxy, name = "Escapement"))+
+                     #Escapements must get rescaled to match axes
+                     geom_line(aes(y = Escapement/maxy), group = 1, size = 1.2)+ggtitle(StockList[i]), envir = .GlobalEnv, pos = 1)
+            
+              # save file for dropbox
+              filePath <- file.path(tempdir(), paste(Figname,".jpg",sep=""))
+              ggsave(ggplot(Melted7DF, aes(x = RunYear, y = value, fill = variable))+
+                     geom_bar(stat = "identity", colour = "black") + theme_bw()+
+                     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                           panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+                     theme(text = element_text(size=16))+
+                     xlab('Catch Year') + ylab('Total Exploitation Rate') +
+                     theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+                     scale_fill_manual("legend", values = c("USER" = "gray47", "CAER" = "gray87"), labels = c("Canada", "US"))+
+                     theme(legend.title=element_blank())+
+                     #Second axis must get rescaled according to the scaling below
+                     scale_y_continuous(lim = c(0,1),sec.axis = sec_axis(~.*maxy, name = "Escapement"))+
+                     #Escapements must get rescaled to match axes
+                     geom_line(aes(y = Escapement/maxy), group = 1, size = 1.2), file = filePath, width = 12, height = 6)
+            
+              drop_upload(filePath)
+            })
+            
+          }
+          
+          #tables
           #Options added - can be changed to Latex but not PDF
           options(knitr.table.format = "html") 
           
@@ -470,6 +600,55 @@ function(input, output, session){
       }
       else if (graphic == "Figure 5.1"){
         Fig51
+      }
+      else if (graphic == "Figure 7.1"){
+        # #Load image from dropbox...second axis will be messed up otherwise
+        # figurl <- "https://www.dropbox.com/s/kuhyt00y4kr2ivf/Fig71.jpg?raw=1"
+        # temploc <- tempfile()
+        # download.file(figurl,temploc,mode="wb")
+        # jpg = readJPEG(temploc)
+        # 
+        # plot(c(100,550), c(300,450),asp=1,type='n',xaxs='i',yaxs='i',xaxt='n',yaxt='n',xlab='',ylab='',bty='n')
+        # rasterImage(jpg,100,300,450,450)
+        
+        maxy <- 160000
+        Fig71
+      }
+      else if (graphic == "Figure 7.2"){
+        Fig72
+      }
+      else if (graphic == "Figure 7.3"){
+        Fig73
+      }
+      else if (graphic == "Figure 7.4"){
+        Fig74
+      }
+      else if (graphic == "Figure 7.5"){
+        Fig75
+      }
+      else if (graphic == "Figure 7.6"){
+        Fig76
+      }
+      else if (graphic == "Figure 7.7"){
+        Fig77
+      }
+      else if (graphic == "Figure 7.8"){
+        Fig78
+      }
+      else if (graphic == "Figure 7.9"){
+        Fig79
+      }
+      else if (graphic == "Figure 7.10"){
+        Fig710
+      }
+      else if (graphic == "Figure 7.11"){
+        Fig711
+      }
+      else if (graphic == "Figure 7.12"){
+        Fig712
+      }
+      else if (graphic == "Figure 7.13"){
+        Fig713
       }
     }
   })
