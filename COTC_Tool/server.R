@@ -33,21 +33,21 @@ FinalRunList <<- c("BASE.Cmd", "CB86.Cmd", "CB87.Cmd", "CB88.Cmd", "CB89.Cmd", "
 #This sets up a stock DF that has all the necessary stock information to be used later
 #LAC = Low Abundance Cohort; UAC = Upper Abundance Cohort; LAMO = Low Abundance Management Objective (cap); MAMO = Moderate Abundance Management Objective,
 #AAMO = Abundant Abundance Management Objective
-SkagitRows <- data.frame(PSCStock = 1, FRAMWildStocks = c(17,18,23,24), StockName = "Skagit",LAC = 22857, UAC = 62500, Cap.Meth = "imu", LAMO = .2, MAMO = .35, AAMO = .6, LEG = NA, UEG = NA, MU = "US Inside")
-StillyRows <- data.frame(PSCStock = 2, FRAMWildStocks = c(29,30), StockName = "Stillaguamish",LAC = 9385, UAC = 20000, Cap.Meth = "imu", LAMO = .2, MAMO = .35, AAMO = .5, LEG = NA, UEG = NA, MU = "US Inside")
-SnohomishRows <- data.frame(PSCStock = 3, FRAMWildStocks = c(35,36), StockName = "Snohomish",LAC = 51667, UAC = 125000, Cap.Meth = "imu", LAMO = .2, MAMO = .4, AAMO = .6, LEG = NA, UEG = NA, MU = "US Inside")
-HoodCanalRows <- data.frame(PSCStock = 4, FRAMWildStocks = c(45,46,55,56,59,60), StockName = "Hood Canal",LAC = 19545, UAC = 41000, Cap.Meth = "imu", LAMO = .2, MAMO = .45, AAMO = .65, LEG = NA, UEG = NA, MU = "US Inside")
-JDFRows <- data.frame(PSCStock = 5, FRAMWildStocks = c(115,116,117,118), StockName = "US Strait JDF",LAC = 11679, UAC = 27445, Cap.Meth = "imu", LAMO = .2, MAMO = .4, AAMO = .6, LEG = NA, UEG = NA, MU = "US Inside")
+SkagitRows <- data.frame(PSCStock = 1, FRAMWildStocks = c(17,18,23,24), StockName = "Skagit",LAC = 22857, UAC = 62500, Cap.Meth = as.character("imu"), LAMO = .2, MAMO = .35, AAMO = .6, LEG = NA, UEG = NA, MU = "US Inside")
+StillyRows <- data.frame(PSCStock = 2, FRAMWildStocks = c(29,30), StockName = "Stillaguamish",LAC = 9385, UAC = 20000, Cap.Meth = as.character("imu"), LAMO = .2, MAMO = .35, AAMO = .5, LEG = NA, UEG = NA, MU = "US Inside")
+SnohomishRows <- data.frame(PSCStock = 3, FRAMWildStocks = c(35,36), StockName = "Snohomish",LAC = 51667, UAC = 125000, Cap.Meth = as.character("imu"), LAMO = .2, MAMO = .4, AAMO = .6, LEG = NA, UEG = NA, MU = "US Inside")
+HoodCanalRows <- data.frame(PSCStock = 4, FRAMWildStocks = c(45,46,55,56,59,60), StockName = "Hood Canal",LAC = 19545, UAC = 41000, Cap.Meth = as.character("imu"), LAMO = .2, MAMO = .45, AAMO = .65, LEG = NA, UEG = NA, MU = "US Inside")
+JDFRows <- data.frame(PSCStock = 5, FRAMWildStocks = c(115,116,117,118), StockName = "US Strait JDF",LAC = 11679, UAC = 27445, Cap.Meth = as.character("imu"), LAMO = .2, MAMO = .4, AAMO = .6, LEG = NA, UEG = NA, MU = "US Inside")
 
-QuilRows <- data.frame(PSCStock = 6, FRAMWildStocks = c(131, 132), StockName = "Quillayute",LAC = 7875, UAC = 10500, Cap.Meth = "omu", LAMO = .2, MAMO = NA, AAMO = NA, LEG = 6300, UEG = 15800, MU = "US Outside")
-HohRows <- data.frame(PSCStock = 7, FRAMWildStocks = c(135, 136), StockName = "Hoh",LAC = 2500, UAC = 3333, Cap.Meth = "omu", LAMO = .2, MAMO = NA, AAMO = NA, LEG = 2000, UEG = 5000, MU = "US Outside")
-QueetsRows <- data.frame(PSCStock = 8, FRAMWildStocks = c(139,140), StockName = "Queets",LAC = 7250, UAC = 9667, Cap.Meth = "omu", LAMO = .2, MAMO = NA, AAMO = NA, LEG = 5800, UEG = 14500, MU = "US Outside")
-GraysHarbRows <- data.frame(PSCStock = 9, FRAMWildStocks = c(149, 150, 153, 154, 157, 158), StockName = "Grays Harbor",LAC = 44250, UAC = 59000, Cap.Meth = "omu", LAMO = NA, MAMO = NA, AAMO = .6, LEG = 35400, UEG = 35400, MU = "US Outside")
+QuilRows <- data.frame(PSCStock = 6, FRAMWildStocks = c(131, 132), StockName = "Quillayute",LAC = 7875, UAC = 10500, Cap.Meth = as.character("omu"), LAMO = .2, MAMO = NA, AAMO = NA, LEG = 6300, UEG = 15800, MU = "US Outside")
+HohRows <- data.frame(PSCStock = 7, FRAMWildStocks = c(135, 136), StockName = "Hoh",LAC = 2500, UAC = 3333, Cap.Meth = as.character("omu"), LAMO = .2, MAMO = NA, AAMO = NA, LEG = 2000, UEG = 5000, MU = "US Outside")
+QueetsRows <- data.frame(PSCStock = 8, FRAMWildStocks = c(139,140), StockName = "Queets",LAC = 7250, UAC = 9667, Cap.Meth = as.character("omu"), LAMO = .2, MAMO = NA, AAMO = NA, LEG = 5800, UEG = 14500, MU = "US Outside")
+GraysHarbRows <- data.frame(PSCStock = 9, FRAMWildStocks = c(149, 150, 153, 154, 157, 158), StockName = "Grays Harbor",LAC = 44250, UAC = 59000, Cap.Meth = as.character("omu"), LAMO = NA, MAMO = NA, AAMO = .6, LEG = 35400, UEG = 35400, MU = "US Outside")
 
-LowFRRows <- data.frame(PSCStock = 10, FRAMWildStocks = c(227, 228), StockName = "Lower Fraser",LAC = NA, UAC = NA, Cap.Meth = NA, LAMO = NA, MAMO = NA, AAMO = NA, LEG = NA, UEG = NA, MU = "Canada")
-IntFRRows <- data.frame(PSCStock = 11, FRAMWildStocks = c(231, 232), StockName = "Interior Fraser",LAC = NA, UAC = NA, Cap.Meth = "fixed", LAMO = .2, MAMO = NA, AAMO = NA, LEG = NA, UEG = NA, MU = "Canada")
-GeoStMLRows <- data.frame(PSCStock = 12, FRAMWildStocks = c(207,208), StockName = "Georgia Strait ML",LAC = NA, UAC = NA, Cap.Meth = NA, LAMO = NA, MAMO = NA, AAMO = NA, LEG = NA, UEG = NA, MU = "Canada")
-GeoStVIRows <- data.frame(PSCStock = 13, FRAMWildStocks = c(211, 212), StockName = "Georgia Strait VI",LAC = NA, UAC = NA, Cap.Meth = NA, LAMO = NA, MAMO = NA, AAMO = NA, LEG = NA, UEG = NA, MU = "Canada")
+LowFRRows <- data.frame(PSCStock = 10, FRAMWildStocks = c(227, 228), StockName = "Lower Fraser",LAC = NA, UAC = NA, Cap.Meth = as.character("None"), LAMO = NA, MAMO = NA, AAMO = NA, LEG = NA, UEG = NA, MU = "Canada")
+IntFRRows <- data.frame(PSCStock = 11, FRAMWildStocks = c(231, 232), StockName = "Interior Fraser",LAC = NA, UAC = NA, Cap.Meth = as.character("fixed"), LAMO = .2, MAMO = NA, AAMO = NA, LEG = NA, UEG = NA, MU = "Canada Fixed")
+GeoStMLRows <- data.frame(PSCStock = 12, FRAMWildStocks = c(207,208), StockName = "Georgia Strait ML",LAC = NA, UAC = NA, Cap.Meth = as.character("None"), LAMO = NA, MAMO = NA, AAMO = NA, LEG = NA, UEG = NA, MU = "Canada")
+GeoStVIRows <- data.frame(PSCStock = 13, FRAMWildStocks = c(211, 212), StockName = "Georgia Strait VI",LAC = NA, UAC = NA, Cap.Meth = as.character("None"), LAMO = NA, MAMO = NA, AAMO = NA, LEG = NA, UEG = NA, MU = "Canada")
 
 StockDF <<- rbind(SkagitRows, StillyRows, SnohomishRows, HoodCanalRows, JDFRows, QuilRows, HohRows, QueetsRows, GraysHarbRows, LowFRRows, IntFRRows, GeoStMLRows, GeoStVIRows)
 
@@ -123,8 +123,8 @@ function(input, output, session){
        withProgress(message = 'Loading Data', value = 0, {
           #Grabs FRAM RunID Table
           
-          incProgress(1/4, detail = "Loading RunID Table")
-         
+          incProgress(1/4, detail = "Loading Post-Season RunID Table")
+          
           RunIDTab = read.csv("https://dl.dropboxusercontent.com/s/ntgampj1d8dyp26/RunList.csv?dl=1")
        
           #removes useless columns in the data
@@ -136,8 +136,10 @@ function(input, output, session){
           YearList <<- sort(YearList, decreasing = FALSE)
        
        
-          incProgress(2/4, detail = "Loading Escapement Table")
+          incProgress(2/4, detail = "Loading Post-Season Escapement Table")
+          
           #Grabs FRAM Escapement Table
+          
           EscTab = read.csv("https://dl.dropboxusercontent.com/s/y5f8kx4v4pxnnrh/Escapement.csv?dl=1")
        
           #Adds run info to EscTab
@@ -154,8 +156,9 @@ function(input, output, session){
        
        
        
-          incProgress(3/4, detail = "Loading Mortality Table - this may take a few minutes")       
+          incProgress(3/4, detail = "Loading Post-Season Mortality Table - this may take a few minutes")       
           #Grab FRAM Mortality Table
+        
           MortTab = read.csv("https://dl.dropboxusercontent.com/s/w0qv3o4bqro7o31/Mortality.csv?dl=1")
        
           #Get summarized Mortalities
@@ -189,6 +192,68 @@ function(input, output, session){
           
           #Sets up table 4.2
           Tab42DF <<- data.frame(Management.Unit = as.character(), Escapement.Goal.Range = as.character(), Low.Moderate.Abundance.Category = as.integer(), Moderate.Abundant.Abundance.Category = as.integer())
+          
+          
+          
+          
+          
+          
+          
+          ################Pre-season data loading
+          #Load Pre-season RunID, Escapement and Mortality Tables
+          
+          PreRunIDTab = read.csv("https://dl.dropboxusercontent.com/s/fnfnwv1ihg3xi3i/PreSeasonRunList.csv?dl=1")
+          PreEscTab = read.csv("https://dl.dropboxusercontent.com/s/womabybbgs11lb9/PreSeasonEscapement.csv?dl=1")
+          PreMortTab = read.csv("https://dl.dropboxusercontent.com/s/ruyewmxz8l1a7jj/PreSeasonMortality.csv?dl=1")
+          
+          #removes useless columns in the data
+          Drops <- c("PrimaryKey", "SpeciesName", "RunTitle",
+                     "RunComments", "CreationDate", "ModifyInputDate", "RunTimeDate")
+          PreRunIDTab<- PreRunIDTab[ , !(names(PreRunIDTab) %in% Drops)]
+          
+          PreYearList<<- unique(PreRunIDTab$RunYear)
+          PreYearList <<- sort(PreYearList, decreasing = FALSE)
+          
+          #Adds run info to EscTab
+          PreEscTab <- merge(PreEscTab, PreRunIDTab, by= "RunID")
+          
+          #Convert integers to characters
+          PreEscTab$RunID <- as.character(PreEscTab$RunID)
+          PreEscTab$RunYear <- as.character(PreEscTab$RunYear)
+          PreEscTab$StockID <- as.character(PreEscTab$StockID)
+          PreEscTab$Age <- as.character(PreEscTab$Age)
+          PreEscTab$TimeStep <- as.character(PreEscTab$TimeStep)
+          PreEscTab$PrimaryKey <- as.character(PreEscTab$PrimaryKey)
+          PreEscTab$BasePeriodID <- as.character(PreEscTab$BasePeriodID)
+          
+          #Get summarized Mortalities
+          PreMortTab$TotMort <- PreMortTab$LandedCatch + PreMortTab$NonRetention + PreMortTab$Shaker + 
+            PreMortTab$DropOff + PreMortTab$MSFLandedCatch + PreMortTab$MSFNonRetention + PreMortTab$MSFShaker + PreMortTab$MSFDropOff
+          
+          #Remove columns no longer of interest
+          Keeps <- c("RunID", "StockID", "Age", "FisheryID", "TimeStep", "TotMort")
+          PreMortTab <- PreMortTab[, (names(PreMortTab) %in% Keeps)]
+          
+          #Adds run info to Mort Tab
+          PreMortTab <- merge(PreMortTab, PreRunIDTab, by= "RunID")
+          
+          #Convert integers to characters
+          PreMortTab$RunID <- as.character(PreMortTab$RunID)
+          PreMortTab$RunYear <- as.character(PreMortTab$RunYear)
+          PreMortTab$StockID <- as.character(PreMortTab$StockID)
+          PreMortTab$Age <- as.character(PreMortTab$Age)
+          PreMortTab$TimeStep <- as.character(PreMortTab$TimeStep)
+          PreMortTab$BasePeriodID <- as.character(PreMortTab$BasePeriodID)
+          PreMortTab$FisheryID <- as.character(PreMortTab$FisheryID)
+          
+          #This is the Esc DF to which all ESC data is saved
+          PreMainEscDF <- data.frame(RunYear = as.character(), Escapement= as.double(), Stock = as.character())
+          #This is the Mort DF to which all mort data is saved
+          PreMainMortDF <- data.frame(RunYear = as.character(), TotMort= as.double(), Stock = as.character())
+          
+          
+          
+          
           
        })
        
@@ -280,6 +345,8 @@ function(input, output, session){
          
             MainMortDF <- rbind(MainMortDF, StockMortRows)
             
+            
+            
             if(SubStockDF$MU[1] == "US Inside"){
               tab41Row <- data.frame(Management.Unit = SubStockDF$StockName[1], Low.Moderate.Abundance.Category = SubStockDF$LAC[1], Moderate.Abundant.Abundance.Category = SubStockDF$UAC[1])
               Tab41DF <<- rbind(Tab41DF, tab41Row)
@@ -296,6 +363,89 @@ function(input, output, session){
                                      Low.Moderate.Abundance.Category = SubStockDF$LAC[1], Moderate.Abundant.Abundance.Category = SubStockDF$UAC[1])
               Tab42DF <<- rbind(Tab42DF, tab42Row)
             }
+            
+            
+            
+            
+            
+            
+            ###################Pre season######################################
+            
+            # Subsets escapement DF to get the stock of interest
+            PreSubEscDF <- subset(PreEscTab, StockID %in% FRAMStks)
+            
+            PreStockEscRows <- ddply(PreSubEscDF, "RunYear",  numcolwise(sum))
+            
+            PreStockEscRows$Stock <- StockList[i]
+            
+            PreMainEscDF <- rbind(PreMainEscDF, PreStockEscRows)
+            
+            
+            # Subsets Mortality DF to get the stock of interest
+            PreSubMortDF <- subset(PreMortTab, StockID %in% FRAMStks)
+            
+            PreStockMortRows <- ddply(PreSubMortDF, "RunYear",  numcolwise(sum))
+            PreStockMortRows$Stock <- StockList[i]
+            
+            #Subsets Mortality DF to get stock/only SUS fisheries
+            PreSubMortDFSUS <- subset(PreMortTab, StockID %in% FRAMStks & FisheryID < 167)
+            
+            #Gets the column number with mortalities in it, renames it to SUS Mort
+            ColIndex <- which(colnames(PreSubMortDFSUS)=="TotMort" )
+            colnames(PreSubMortDFSUS)[ColIndex] <- "SUSMort"
+            
+            #Sums everything by run year
+            PreStockMortSUSRows <- ddply(PreSubMortDFSUS, "RunYear",  numcolwise(sum))
+            
+            #Finds out years with 0s; add row so a zero gets merged in later
+            for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
+              if(!(j %in% PreStockMortSUSRows$RunYear)){
+                newrow <- data.frame(RunYear = j, SUSMort = 0)
+                PreStockMortSUSRows <- rbind(PreStockMortSUSRows, newrow)
+              }
+            }
+            
+            #Subsets Mortality DF to get stock/only CA fisheries
+            PreSubMortDFCA <- subset(PreMortTab, StockID %in% FRAMStks & FisheryID > 166 & FisheryID < 194)
+            
+            #Gets the column number with mortalities in it, renames it to CA Mort
+            ColIndex <- which(colnames(PreSubMortDFCA)=="TotMort" )
+            colnames(PreSubMortDFCA)[ColIndex] <- "CAMort"
+            
+            PreStockMortCARows <- ddply(PreSubMortDFCA, "RunYear",  numcolwise(sum))
+            
+            #Finds out years with 0s; add row so a zero gets merged in later
+            for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
+              if(!(j %in% PreStockMortCARows$RunYear)){
+                newrow <- data.frame(RunYear = j, CAMort = 0)
+                PreStockMortCARows <- rbind(PreStockMortCARows, newrow)
+              }
+            }
+            
+            #Subsets Mortality DF to get stock/only AK fisheries
+            PreSubMortDFAK <- subset(PreMortTab, StockID %in% FRAMStks & FisheryID > 193)
+            
+            #Gets the column number with mortalities in it, renames it to CA Mort
+            ColIndex <- which(colnames(PreSubMortDFAK)=="TotMort" )
+            colnames(PreSubMortDFAK)[ColIndex] <- "AKMort"
+            
+            PreStockMortAKRows <- ddply(PreSubMortDFAK, "RunYear",  numcolwise(sum))
+            
+            #Finds out years with 0s; add row so a zero gets merged in later
+            for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
+              if(!(j %in% PreStockMortAKRows$RunYear)){
+                newrow <- data.frame(RunYear = j, AKMort = 0)
+                PreStockMortAKRows <- rbind(PreStockMortAKRows, newrow)
+              }
+            }
+            
+            #Merge in SUS,CA, AK
+            PreStockMortRows <- merge(PreStockMortRows, PreStockMortSUSRows, by= "RunYear")
+            PreStockMortRows <- merge(PreStockMortRows, PreStockMortCARows, by= "RunYear")
+            PreStockMortRows <- merge(PreStockMortRows, PreStockMortAKRows, by= "RunYear")
+            
+            
+            PreMainMortDF <- rbind(PreMainMortDF, PreStockMortRows)
          
          
           }
@@ -304,7 +454,82 @@ function(input, output, session){
           MainDataDF <<- merge(MainEscDF, MainMortDF, by= c("Stock","RunYear"))
        
           #Ocean Cohort = Escapement + Mortality
-          MainDataDF$OceanCohort <- MainDataDF$Escapement + MainDataDF$TotMort
+          MainDataDF$OceanCohort <<- MainDataDF$Escapement + MainDataDF$TotMort
+          
+          #Merging data frames
+          PreMainDataDF <<- merge(PreMainEscDF, PreMainMortDF, by= c("Stock","RunYear"))
+          
+          #Ocean Cohort = Escapement + Mortality
+          PreMainDataDF$OceanCohort <<- PreMainDataDF$Escapement + PreMainDataDF$TotMort
+          
+          #To get abundance objectives, gets only unique rows for columns 3 to 11
+          StockDFOBJ <- unique(StockDF[,3:11])
+          
+          StockDFOBJ$Stock <- StockDFOBJ$StockName
+          
+          PreMainDataDF <<- merge(PreMainDataDF, StockDFOBJ, by = "Stock")
+          
+          #Gets the abundance category
+          PreMainDataDF$Abund <<- NA
+          
+          for (i in 1:nrow(PreMainDataDF)){
+            if(PreMainDataDF$Cap.Meth[i] == "None"){
+              #do nothing - just makes sure that the loop isn't failing as it checks NAs
+            }
+            else if(PreMainDataDF$Cap.Meth[i] == "omu" | PreMainDataDF$Cap.Meth[i] == "imu"){
+               if (PreMainDataDF$LAC[i] > PreMainDataDF$OceanCohort[i]){
+                 PreMainDataDF$Abund[i] <<- "(L)"
+               }
+               else if(PreMainDataDF$LAC[i] < PreMainDataDF$OceanCohort[i] & PreMainDataDF$UAC[i] > PreMainDataDF$OceanCohort[i]){
+                 PreMainDataDF$Abund[i] <<- "(M)"
+               }
+               else{
+                 PreMainDataDF$Abund[i] <<- "(A)"
+               }
+             }
+            #Interior Fraser = always low?
+            else if(PreMainDataDF$Cap.Meth[i] == "fixed"){
+              PreMainDataDF$Abund[i] <<- "(L)"
+            }
+          }
+          
+          #Gets rid of all the useless columns
+          DFDrops <- c("StockName", "LAC", "UAC", "Cap.Meth", "LAMO", "MAMO", "AAMO", "LEG", "UEG", "MU")
+          PreMainDataDF<<- PreMainDataDF[ , !(names(PreMainDataDF) %in% DFDrops)]
+          
+          
+          
+          
+          MainDataDF <<- merge(MainDataDF, StockDFOBJ, by = "Stock")
+          
+          #Gets the abundance category
+          MainDataDF$Abund <<- NA
+
+
+          for (i in 1:nrow(MainDataDF)){
+              if(MainDataDF$Cap.Meth[i] == "None"){
+                #do nothing - just makes sure that the loop isn't failing as it checks NAs
+              }
+             else if(MainDataDF$Cap.Meth[i] == "omu" | MainDataDF$Cap.Meth[i] == "imu"){
+               if (MainDataDF$LAC[i] > MainDataDF$OceanCohort[i]){
+                 MainDataDF$Abund[i] <<- "(L)"
+               }
+               else if(MainDataDF$LAC[i] < MainDataDF$OceanCohort[i] & MainDataDF$UAC[i] > MainDataDF$OceanCohort[i]){
+                 MainDataDF$Abund[i] <<- "(M)"
+               }
+               else{
+                 MainDataDF$Abund[i] <<- "(A)"
+               }
+             }
+             #Interior Fraser = always low?
+             else if(MainDataDF$Cap.Meth[i] == "fixed"){
+               MainDataDF$Abund[i] <<- "(L)"
+             }
+           }
+
+          #Gets rid of all the useless columns
+          MainDataDF<<- MainDataDF[ , !(names(MainDataDF) %in% DFDrops)]
+          
        
           #Ocean Cohort Figures (4.1, 4.2, 4.3)
           incProgress(1/2, detail = "Preparing figures")
@@ -582,7 +807,8 @@ function(input, output, session){
         
         Thanks for using the tool! 
         
-        Please email Derek Dapp at derek.dapp@dfw.wa.gov
+        Please email Derek Dapp at derek.dapp@dfw.wa.gov or
+        Angelika Hagen-Breaux at angelika.hagen-breaux@dfw.wa.gov
         If you have any questions related to the tool"
         par(mar = c(0,0,0,0))
         plot(c(0, 1), c(0, 1), ann = F, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
