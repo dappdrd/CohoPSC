@@ -39,7 +39,7 @@ shinyServer(
                               "Figure 7.6", "Figure 7.7", "Figure 7.8", "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13")),
     
       selectInput("table", "Please choose a table to display",
-                  choices = c("None","Table 4.1", "Table 4.2", "Testing Table")),
+                  choices = c("None","Table 4.1", "Table 4.2", "Table 6.1", "Table 6.2", "Table 6.3")),
       
       textInput("EmailAdd", "Email to send to:", ""),
       actionButton("EmailButton",label = "Send data to my email")

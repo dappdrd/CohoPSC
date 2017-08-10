@@ -84,7 +84,7 @@ function(input, output, session){
           send.mail(from = "derek.dapp.dfw@gmail.com",
                  to = input$EmailAdd,
                  subject = "Coho PSC Report Data",
-                 body = "Please see the attached for the PSC report files.  Note that tables are encoded as html files.  These can be converted to tables in a PDF or word format by using an online converter.",
+                 body = "Please see the attached for the PSC report files.  Note that tables are encoded as html files.  These can be converted to tables by saving the files as a .html rather than .txt and opening the file with your web browser.",
                  smtp = list(host.name = "smtp.gmail.com", port = 465, user.name = "derek.dapp.dfw@gmail.com", passwd = "FakePass2", ssl = TRUE),
                  authenticate = TRUE,
                  send = TRUE,
@@ -94,6 +94,9 @@ function(input, output, session){
                                   "https://dl.dropboxusercontent.com/s/3cmw8yda3677ls5/Table%204.1%20html.txt",
                                   "https://dl.dropboxusercontent.com/s/cih9ma0vtly8a72/Table%204.2%20html.txt",
                                   "https://dl.dropboxusercontent.com/s/4g48qbf6kstpb6d/Figure%205.1.jpg",
+                                  "https://dl.dropboxusercontent.com/s/38bwwvqhavtgw5p/Table%206.1%20html.txt",
+                                  "https://dl.dropboxusercontent.com/s/42hz2sen7szcfps/Table%206.2%20html.txt",
+                                  "https://dl.dropboxusercontent.com/s/4n3k8gatiskppa2/Table%206.3%20html.txt",
                                   "https://dl.dropboxusercontent.com/s/kuhyt00y4kr2ivf/Fig71.jpg",
                                   "https://dl.dropboxusercontent.com/s/kqz9jx32h6aiek0/Fig72.jpg",
                                   "https://dl.dropboxusercontent.com/s/tuya8vhn9ayrg1f/Fig73.jpg",
@@ -107,8 +110,8 @@ function(input, output, session){
                                   "https://dl.dropboxusercontent.com/s/tri09bacabye2kq/Fig711.jpg",
                                   "https://dl.dropboxusercontent.com/s/p8t646v5rwnqaga/Fig712.jpg",
                                   "https://dl.dropboxusercontent.com/s/f0l65a9pit6fi0d/Fig713.jpg"),
-                 file.descriptions = c("Figure 4.1", "Figure 4.2", "Figure 4.3", "Table 4.1","Table 4.2", "Figure 5.1", "Figure 7.1",
-                                       "Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5", "Figure 7.6", "Figure 7.7", "Figure 7.8",
+                 file.descriptions = c("Figure 4.1", "Figure 4.2", "Figure 4.3", "Table 4.1","Table 4.2", "Figure 5.1", "Table 6.1","Table 6.2",
+                                       "Table 6.3","Figure 7.1","Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5", "Figure 7.6", "Figure 7.7", "Figure 7.8",
                                        "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13"), # optional parameter
                  debug = TRUE)
        })
@@ -123,7 +126,7 @@ function(input, output, session){
        withProgress(message = 'Loading Data', value = 0, {
           #Grabs FRAM RunID Table
           
-          incProgress(1/4, detail = "Loading Post-Season RunID Table")
+          incProgress(1/2, detail = "Loading Post-Season Data - this may take a few minutes")
           
           RunIDTab = read.csv("https://dl.dropboxusercontent.com/s/ntgampj1d8dyp26/RunList.csv?dl=1")
        
@@ -134,9 +137,6 @@ function(input, output, session){
        
           YearList<<- unique(RunIDTab$RunYear)
           YearList <<- sort(YearList, decreasing = FALSE)
-       
-       
-          incProgress(2/4, detail = "Loading Post-Season Escapement Table")
           
           #Grabs FRAM Escapement Table
           
@@ -154,9 +154,6 @@ function(input, output, session){
           EscTab$PrimaryKey <- as.character(EscTab$PrimaryKey)
           EscTab$BasePeriodID <- as.character(EscTab$BasePeriodID)
        
-       
-       
-          incProgress(3/4, detail = "Loading Post-Season Mortality Table - this may take a few minutes")       
           #Grab FRAM Mortality Table
         
           MortTab = read.csv("https://dl.dropboxusercontent.com/s/w0qv3o4bqro7o31/Mortality.csv?dl=1")
@@ -197,7 +194,7 @@ function(input, output, session){
           
           
           
-          
+          incProgress(2/2, detail = "Loading Pre-Season Data - this may take a few minutes")    
           
           ################Pre-season data loading
           #Load Pre-season RunID, Escapement and Mortality Tables
@@ -258,7 +255,7 @@ function(input, output, session){
        })
        
        withProgress(message = 'Processing Data/Preparing figures', value = 0, {
-          incProgress(1/2, detail = "Processing Data")
+          incProgress(1/5, detail = "Processing Data")
           #This is the main processing loop (gets escapements, cohorts, fishery mortality by stock)
           for(i in 1:length(StockList)){
          
@@ -470,7 +467,7 @@ function(input, output, session){
           PreMainDataDF <<- merge(PreMainDataDF, StockDFOBJ, by = "Stock")
           
           #Gets the abundance category
-          PreMainDataDF$Abund <<- NA
+          PreMainDataDF$PreAbund <<- NA
           
           for (i in 1:nrow(PreMainDataDF)){
             if(PreMainDataDF$Cap.Meth[i] == "None"){
@@ -478,18 +475,18 @@ function(input, output, session){
             }
             else if(PreMainDataDF$Cap.Meth[i] == "omu" | PreMainDataDF$Cap.Meth[i] == "imu"){
                if (PreMainDataDF$LAC[i] > PreMainDataDF$OceanCohort[i]){
-                 PreMainDataDF$Abund[i] <<- "(L)"
+                 PreMainDataDF$PreAbund[i] <<- "(L)"
                }
                else if(PreMainDataDF$LAC[i] < PreMainDataDF$OceanCohort[i] & PreMainDataDF$UAC[i] > PreMainDataDF$OceanCohort[i]){
-                 PreMainDataDF$Abund[i] <<- "(M)"
+                 PreMainDataDF$PreAbund[i] <<- "(M)"
                }
                else{
-                 PreMainDataDF$Abund[i] <<- "(A)"
+                 PreMainDataDF$PreAbund[i] <<- "(A)"
                }
              }
             #Interior Fraser = always low?
             else if(PreMainDataDF$Cap.Meth[i] == "fixed"){
-              PreMainDataDF$Abund[i] <<- "(L)"
+              PreMainDataDF$PreAbund[i] <<- "(L)"
             }
           }
           
@@ -503,7 +500,7 @@ function(input, output, session){
           MainDataDF <<- merge(MainDataDF, StockDFOBJ, by = "Stock")
           
           #Gets the abundance category
-          MainDataDF$Abund <<- NA
+          MainDataDF$PostAbund <<- NA
 
 
           for (i in 1:nrow(MainDataDF)){
@@ -512,18 +509,18 @@ function(input, output, session){
               }
              else if(MainDataDF$Cap.Meth[i] == "omu" | MainDataDF$Cap.Meth[i] == "imu"){
                if (MainDataDF$LAC[i] > MainDataDF$OceanCohort[i]){
-                 MainDataDF$Abund[i] <<- "(L)"
+                 MainDataDF$PostAbund[i] <<- "(L)"
                }
                else if(MainDataDF$LAC[i] < MainDataDF$OceanCohort[i] & MainDataDF$UAC[i] > MainDataDF$OceanCohort[i]){
-                 MainDataDF$Abund[i] <<- "(M)"
+                 MainDataDF$PostAbund[i] <<- "(M)"
                }
                else{
-                 MainDataDF$Abund[i] <<- "(A)"
+                 MainDataDF$PostAbund[i] <<- "(A)"
                }
              }
              #Interior Fraser = always low?
              else if(MainDataDF$Cap.Meth[i] == "fixed"){
-               MainDataDF$Abund[i] <<- "(L)"
+               MainDataDF$PostAbund[i] <<- "(L)"
              }
            }
 
@@ -532,7 +529,7 @@ function(input, output, session){
           
        
           #Ocean Cohort Figures (4.1, 4.2, 4.3)
-          incProgress(1/2, detail = "Preparing figures")
+          incProgress(2/5, detail = "Preparing figures 4.1 to 4.3")
        
           for (i in 1:3){
             if (i == 1){
@@ -619,6 +616,8 @@ function(input, output, session){
             }
           }
           
+          incProgress(3/5, detail = "Preparing figure 5.1")
+          
           #Preparing figure 5.1 (total fishery mortality of all management units combined, by CA and US)
           Fig51DF <- ddply(MainDataDF, "RunYear",  numcolwise(sum))
           Fig51DF$USMort <- Fig51DF$SUSMort + Fig51DF$AKMort
@@ -659,6 +658,8 @@ function(input, output, session){
           
           
           OrderDF <<- rbind(OrdRow1,OrdRow2,OrdRow3,OrdRow4,OrdRow5,OrdRow6,OrdRow7,OrdRow8,OrdRow9,OrdRow10,OrdRow11,OrdRow12,OrdRow13)
+          
+          incProgress(4/5, detail = "Preparing figures 7.1 to 7.13")
           
           #Figures 7.1-7.13
           for (i in 1:length(StockList)){
@@ -731,6 +732,7 @@ function(input, output, session){
             
           }
           
+          incProgress(5/5, detail = "Tables")
           #tables
           #Options added - can be changed to Latex but not PDF
           options(knitr.table.format = "html") 
@@ -773,6 +775,133 @@ function(input, output, session){
           writeLines(Tab42DFhtml,filePath)
           
           drop_upload(filePath)
+          
+          
+          
+          
+          
+          
+          
+          
+          # #########Table 6 and table 8
+
+          #Only pre-season data from 2004 onward
+          CombinedDF <- subset(MainDataDF, RunYear > 2003)
+
+          #Converts to ERs for table 8; saves Cohort for table 6
+          CombinedDF$PostUSER <- (CombinedDF$SUSMort + CombinedDF$AKMort)/CombinedDF$OceanCohort
+          CombinedDF$PostCAER <- CombinedDF$CAMort/CombinedDF$OceanCohort
+          CombinedDF$PostTotER <- CombinedDF$TotMort/CombinedDF$OceanCohort
+
+          CombinedDF$PostCohort <- CombinedDF$OceanCohort
+
+          #drop useless columns
+          CombinedDFDrops <- c("Escapement", "TotMort", "SUSMort", "CAMort", "AKMort", "OceanCohort")
+          CombinedDF<- CombinedDF[ , !(names(CombinedDF) %in% CombinedDFDrops)]
+
+          CombinedDF <- merge(CombinedDF, PreMainDataDF, by = c("Stock", "RunYear"))
+
+          #Converts to ERs for table 8; saves Cohort for table 6
+          CombinedDF$PreUSER <- (CombinedDF$SUSMort + CombinedDF$AKMort)/CombinedDF$OceanCohort
+          CombinedDF$PreCAER <- CombinedDF$CAMort/CombinedDF$OceanCohort
+          CombinedDF$PreTotER <- CombinedDF$TotMort/CombinedDF$OceanCohort
+
+          CombinedDF$PreCohort <- CombinedDF$OceanCohort
+
+          #drop useless columns
+          CombinedDFDrops <- c("Escapement", "TotMort", "SUSMort", "CAMort", "AKMort", "OceanCohort")
+          CombinedDF<- CombinedDF[ , !(names(CombinedDF) %in% CombinedDFDrops)]
+
+          #To get abundance objectives, gets only unique rows for columns 3 to 11
+          StockDFOBJ <- unique(StockDF[,c(1,3)])
+
+          StockDFOBJ$Stock <- StockDFOBJ$StockName
+
+          #Add psc stock for table ordering
+          CombinedDF <- merge(CombinedDF, StockDFOBJ[ , c("Stock", "PSCStock")], by = "Stock", all.x=TRUE)
+
+          #Sort
+          CombinedDF <- CombinedDF[with(CombinedDF, order(PSCStock)), ]
+
+          #Really table 6.1 is three separate tables, one for each grouping (CA, US Inside, US Outside)
+          Tab6DF <- CombinedDF
+
+          #This gets the percent difference, rounded to the nearest tenth, with a percentage symbol added
+          Tab6DF$Difference <- paste(round((Tab6DF$PreCohort - Tab6DF$PostCohort)/Tab6DF$PreCohort, digits = 3) * 100, "%",sep="")
+
+          #Removes NAs
+          Tab6DF[is.na(Tab6DF)] <- ""
+
+          #This rounds cohorts, adds in abundances
+          Tab6DF$PostCohort <- paste(round(Tab6DF$PostCohort, digits = 0), Tab6DF$PostAbund, sep=" ")
+          Tab6DF$PreCohort <- paste(round(Tab6DF$PreCohort, digits = 0), Tab6DF$PreAbund, sep=" ")
+
+          #Rename column headers
+          ColIndex <- which(colnames(Tab6DF)=="PostCohort" )
+          colnames(Tab6DF)[ColIndex] <- "Post-Season"
+          ColIndex <- which(colnames(Tab6DF)=="PreCohort" )
+          colnames(Tab6DF)[ColIndex] <- "Pre-Season"
+          ColIndex <- which(colnames(Tab6DF)=="RunYear" )
+          colnames(Tab6DF)[ColIndex] <- "Catch Year"
+
+
+          #Drops columns that arent of interest to the table
+          Tab6DFDrops <- c("PostAbund", "PostUSER", "PostCAER", "PostTotER", "PreAbund", "PreUSER", "PreCAER", "PreTotER", "PSCStock")
+          Tab6DF<- Tab6DF[ , !(names(Tab6DF) %in% Tab6DFDrops)]
+
+          #Fix column orders
+          Tab6DF <- Tab6DF[,c("Stock", "Catch Year", "Pre-Season", "Post-Season", "Difference")]
+
+          #Changes it to three separate tables, this more closely matches the formatting in the report.
+          Tab61DF <<- subset(Tab6DF, Stock %in% c("Lower Fraser", "Interior Fraser", "Georgia Strait ML", "Georgia Strait VI"))
+
+          ColIndex <- which(colnames(Tab61DF)=="Stock" )
+          colnames(Tab61DF)[ColIndex] <<- "Management Unit"
+
+          Tab61DFhtml <- kable (Tab61DF, row.names = FALSE) %>%
+            kable_styling("bordered") %>%
+            #group columns by stock
+            collapse_rows(columns = 1)%>%
+            #add header row
+            add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
+          
+          Tab62DF <<- subset(Tab6DF, Stock %in% c("Skagit", "Stillaguamish", "Snohomish", "Hood Canal", "US Strait JDF"))
+          
+          ColIndex <- which(colnames(Tab62DF)=="Stock" )
+          colnames(Tab62DF)[ColIndex] <<- "Management Unit"
+          
+          Tab62DFhtml <- kable (Tab62DF, row.names = FALSE) %>%
+            kable_styling("bordered") %>%
+            #group columns by stock
+            collapse_rows(columns = 1)%>%
+            #add header row
+            add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
+          
+          Tab63DF <<- subset(Tab6DF, Stock %in% c("Quillayute", "Hoh", "Queets", "Grays Harbor"))
+          
+          ColIndex <- which(colnames(Tab63DF)=="Stock" )
+          colnames(Tab63DF)[ColIndex] <<- "Management Unit"
+          
+          Tab63DFhtml <- kable (Tab63DF, row.names = FALSE) %>%
+            kable_styling("bordered") %>%
+            #group columns by stock
+            collapse_rows(columns = 1)%>%
+            #add header row
+            add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
+
+          #upload tables 6.1, 6.2, 6.3
+          filePath <- file.path(tempdir(), "Table 6.1 html.txt")
+          writeLines(Tab61DFhtml,filePath)
+          
+          filePath2 <- file.path(tempdir(), "Table 6.2 html.txt")
+          writeLines(Tab62DFhtml,filePath2)
+          
+          filePath3 <- file.path(tempdir(), "Table 6.3 html.txt")
+          writeLines(Tab63DFhtml,filePath3)
+
+          drop_upload(filePath)
+          drop_upload(filePath2)
+          drop_upload(filePath3)
           
        })
      })
@@ -889,8 +1018,14 @@ function(input, output, session){
     else if (input$table == "Table 4.2"){
       Tab42DF
     }
-    else if (input$table == "Testing Table"){
-      MainDataDF
+    else if (input$table == "Table 6.1"){
+      Tab61DF
+    }
+    else if (input$table == "Table 6.2"){
+      Tab62DF
+    }
+    else if (input$table == "Table 6.3"){
+      Tab63DF
     }
   }) 
 }
