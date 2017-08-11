@@ -33,13 +33,17 @@ shinyServer(
       
       textInput("PasswordAdd", "Please enter password to access program functions", ""),
       #Adds a dropdown box
-      actionButton("DataProcessButton",label = "Process data"),
+      actionButton("DataProcessButton",label = "Process Data/Create Figures & Tables"),
+      actionButton("FTableButton",label = "Produce Appendix F Tables"),
       selectInput("graphic", "Please choose a figure to display",
                   choices = c("None", "Figure 4.1", "Figure 4.2", "Figure 4.3", "Figure 5.1", "Figure 7.1", "Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5",
                               "Figure 7.6", "Figure 7.7", "Figure 7.8", "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13")),
     
       selectInput("table", "Please choose a table to display",
-                  choices = c("None","Table 4.1", "Table 4.2", "Table 6.1", "Table 6.2", "Table 6.3")),
+                  choices = c("None","Table 4.1", "Table 4.2", "Table 6.1", "Table 6.2", "Table 6.3", "Table 9", "Table F - Lower Fraser",
+                              "Table F - Interior Fraser", "Table F - St of Geo ML", "Table F - St of Geo VI", "Table F - Skagit",
+                              "Table F - Stillaguamish", "Table F - Snohomish", "Table F - Hood Canal", "Table F - US JDF",
+                              "Table F - Quillayute", "Table F - Hoh", "Table F - Queets", "Table F - Grays Harbor")),
       
       textInput("EmailAdd", "Email to send to:", ""),
       actionButton("EmailButton",label = "Send data to my email")

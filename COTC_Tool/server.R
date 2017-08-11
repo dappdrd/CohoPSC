@@ -109,10 +109,28 @@ function(input, output, session){
                                   "https://dl.dropboxusercontent.com/s/rwvdcqwk410mrrv/Fig710.jpg",
                                   "https://dl.dropboxusercontent.com/s/tri09bacabye2kq/Fig711.jpg",
                                   "https://dl.dropboxusercontent.com/s/p8t646v5rwnqaga/Fig712.jpg",
-                                  "https://dl.dropboxusercontent.com/s/f0l65a9pit6fi0d/Fig713.jpg"),
+                                  "https://dl.dropboxusercontent.com/s/f0l65a9pit6fi0d/Fig713.jpg",
+                                  "https://dl.dropboxusercontent.com/s/a2mtb0dh15njfl3/Table%209.csv",
+                                  "https://dl.dropboxusercontent.com/s/3gup4wp347syq6d/Table%20F%20-%20Lower%20Fraser.csv",
+                                  "https://dl.dropboxusercontent.com/s/77g6vdw95ggqp1w/Table%20F%20-%20Interior%20Fraser.csv",
+                                  "https://dl.dropboxusercontent.com/s/21nczz5t82mf14p/Table%20F%20-%20St%20of%20Geo%20ML.csv",
+                                  "https://dl.dropboxusercontent.com/s/lkgmddt7jc60bok/Table%20F%20-%20St%20of%20Geo%20VI.csv",
+                                  "https://dl.dropboxusercontent.com/s/che8dnucqxjjty2/Table%20F%20-%20Skagit.csv",
+                                  "https://dl.dropboxusercontent.com/s/s1eizqt9k49objd/Table%20F%20-%20Stillaguamish.csv",
+                                  "https://dl.dropboxusercontent.com/s/5mm6b7h3r8gd1nz/Table%20F%20-%20Snohomish.csv",
+                                  "https://dl.dropboxusercontent.com/s/4m40ow5m1dw4svw/Table%20F%20-%20Hood%20Canal.csv",
+                                  "https://dl.dropboxusercontent.com/s/qvetwz7er2d6pgf/Table%20F%20-%20US%20JDF.csv",
+                                  "https://dl.dropboxusercontent.com/s/t8ohzyk0sh37r9e/Table%20F%20-%20Quillayute.csv",
+                                  "https://dl.dropboxusercontent.com/s/c5cgq9cbtrzlecm/Table%20F%20-%20Hoh.csv",
+                                  "https://dl.dropboxusercontent.com/s/8pvivydowzu8ic4/Table%20F%20-%20Queets.csv",
+                                  "https://dl.dropboxusercontent.com/s/xu44i9ot1sss08x/Table%20F%20-%20Grays%20Harbor.csv"),
                  file.descriptions = c("Figure 4.1", "Figure 4.2", "Figure 4.3", "Table 4.1","Table 4.2", "Figure 5.1", "Table 6.1","Table 6.2",
                                        "Table 6.3","Figure 7.1","Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5", "Figure 7.6", "Figure 7.7", "Figure 7.8",
-                                       "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13"), # optional parameter
+                                       "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13", "Table 9",
+                                       "Table F - Lower Fraser", "Table F - Interior Fraser", "Table F - St of Geo ML", 
+                                       "Table F - St of Geo VI", "Table F - Skagit", "Table F - Stillaguamish",
+                                       "Table F - Snohomish", "Table F - Hood Canal", "Table F - US JDF",
+                                       "Table F - Quillayute", "Table F - Hoh", "Table F - Queets", "Table F - Grays Harbor"), # optional parameter
                  debug = TRUE)
        })
      })
@@ -176,8 +194,10 @@ function(input, output, session){
           MortTab$TimeStep <- as.character(MortTab$TimeStep)
           MortTab$BasePeriodID <- as.character(MortTab$BasePeriodID)
           MortTab$FisheryID <- as.character(MortTab$FisheryID)
-       
-       
+          
+          #make them global variables for use in the F Tables
+          MortTab <<- MortTab
+          EscTab <<- EscTab
        
           #This is the Esc DF to which all ESC data is saved
           MainEscDF <- data.frame(RunYear = as.character(), Escapement= as.double(), Stock = as.character())
@@ -903,8 +923,354 @@ function(input, output, session){
           drop_upload(filePath2)
           drop_upload(filePath3)
           
+          
+          
+          
+          
+          
+          
+          
+          #Prepare Table 9
+          
+          USHatcheryMarkedStocks <- c(4,6,8,10,16,20,22,26,28,32,34,38,40,42,48,50,54,58,66,68,72,74,78,80,84,88,
+                                      92,96,100,104,110,114,120,126,130,134,138,142,144,148,152,
+                                      156,160,164,166,168,176,178,182,186,190,192,194,198,202)
+          USHatcheryUnmarkedStocks <- c(3,5,7,9,15,19,21,25,27,31,33,37,39,41,47,49,53,57,65,67,71,73,77,79,83,87,
+                                        91,95,99,103,109,113,119,125,129,133,137,141,143,147,151,
+                                        155,159,163,165,167,175,177,181,185,189,191,193,197,201)
+          CAHatcheryMarkedStocks <- c(206,210,214,218,222,226,230)
+          CAHatcheryUnmarkedStocks <- c(205,209,213,217,221,225,229)
+          
+          #Subsets Mortality DF to get US Hat Marked in CA fisheries
+          Tab9DFUSMarked <- subset(MortTab, StockID %in% USHatcheryMarkedStocks & FisheryID > 166 & FisheryID < 193)
+          
+          Tab9DFUSMarked <- ddply(Tab9DFUSMarked, "RunYear",  numcolwise(sum))
+          
+          Tab9DFUSMarked$TotMort <- round(Tab9DFUSMarked$TotMort, digits = 0)
+          
+          #Gets the column number with mortalities in it, renames it 
+          ColIndex <- which(colnames(Tab9DFUSMarked)=="TotMort" )
+          colnames(Tab9DFUSMarked)[ColIndex] <- "CA Catch of US Marked"
+          
+          
+          
+          #US UM
+          
+          Tab9DFUSUM <- subset(MortTab, StockID %in% USHatcheryUnmarkedStocks & FisheryID > 166 & FisheryID < 193)
+          
+          Tab9DFUSUM <- ddply(Tab9DFUSUM, "RunYear",  numcolwise(sum))
+          
+          Tab9DFUSUM$TotMort <- round(Tab9DFUSUM$TotMort, digits = 0)
+          
+          ColIndex <- which(colnames(Tab9DFUSUM)=="TotMort" )
+          colnames(Tab9DFUSUM)[ColIndex] <- "CA Catch of US Unmarked"
+          
+          
+          
+          #CA M
+          
+          Tab9DFCAMarked <- subset(MortTab, StockID %in% CAHatcheryMarkedStocks & (FisheryID < 167 | FisheryID > 193))
+          
+          Tab9DFCAMarked <- ddply(Tab9DFCAMarked, "RunYear",  numcolwise(sum))
+          
+          Tab9DFCAMarked$TotMort <- round(Tab9DFCAMarked$TotMort, digits = 0)
+          
+          ColIndex <- which(colnames(Tab9DFCAMarked)=="TotMort" )
+          colnames(Tab9DFCAMarked)[ColIndex] <- "US Catch of CA Marked"
+          
+          
+          
+          #CA UM
+          Tab9DFCAUM <- subset(MortTab, StockID %in% CAHatcheryUnmarkedStocks & (FisheryID < 167 | FisheryID > 193))
+          
+          Tab9DFCAUM <- ddply(Tab9DFCAUM, "RunYear",  numcolwise(sum))
+          
+          Tab9DFCAUM$TotMort <- round(Tab9DFCAUM$TotMort, digits = 0)
+          
+          ColIndex <- which(colnames(Tab9DFCAUM)=="TotMort" )
+          colnames(Tab9DFCAUM)[ColIndex] <- "US Catch of CA Unmarked"
+          
+          #Merges DFs to a single table
+          Tab9 <- merge(Tab9DFCAMarked, Tab9DFCAUM, by= "RunYear")
+          Tab9 <- merge(Tab9, Tab9DFUSMarked, by= "RunYear")
+          Tab9 <- merge(Tab9, Tab9DFUSUM, by= "RunYear")
+          
+          ColIndex <- which(colnames(Tab9)=="RunYear" )
+          colnames(Tab9)[ColIndex] <- "Year"
+          
+          Tab9 <<- Tab9
+          
+          filePath <- file.path(tempdir(), "Table 9.csv")
+          write.csv(Tab9,filePath)
+          
+          drop_upload(filePath)
+          
+          
        })
      })
+   })
+   
+   
+   
+   
+   
+   
+   #Extra button for F tables, which take up a large amount of server memory
+   observe({
+      if (input$FTableButton == 0 | input$PasswordAdd != Password)
+        return(NULL)
+      isolate({
+            #Appendix F tables
+            #Aggregate fisheries into groupings
+            BCNCTRRow <- data.frame(Fishery = "BC No/Cent Troll", FRAMFish = c(171,172,173))
+            BCNCNetRow <- data.frame(Fishery = "BC No/Cent Net", FRAMFish = c(178, 179))
+            BCNCSptRow <- data.frame(Fishery = "BC No/Cent Sport", FRAMFish = c(187, 188))
+            BCWCVITrollRow <- data.frame(Fishery = "BC WCVI Troll", FRAMFish = c(174, 175))
+            BCWCVINetRow <- data.frame(Fishery = "BC WCVI Net", FRAMFish = c(180, 181))
+            BCWCVISptRow <- data.frame(Fishery = "BC WCVI Sport", FRAMFish = c(190, 193))
+            BCJSNetRow <- data.frame(Fishery = "BC JnstStr Net & Trl", FRAMFish = c(182, 170))
+            BCJSSptRow <- data.frame(Fishery = "BC JnstStr Sport", FRAMFish = c(186))
+            BCGSSptRow <- data.frame(Fishery = "BC GeoStr Spt & Trl", FRAMFish = c(176,191,192))
+            BCGSNetRow <- data.frame(Fishery = "BC GeoStr Net", FRAMFish = c(183))
+            BCJDFSptRow <- data.frame(Fishery = "BC JDF Sport", FRAMFish = c(189))
+            BCJDFNetRow <- data.frame(Fishery = "BC JDF Net & Troll", FRAMFish = c(178, 179))
+            BCFraserRow <- data.frame(Fishery = "BC Fraser Net & Spt", FRAMFish = c(169, 184, 167, 168))
+            
+            SEAKRow <- data.frame(Fishery = "SEAK All", FRAMFish = c(194, 195, 196, 197, 198))
+            WAOceanTrlRow <- data.frame(Fishery = "WA Ocean Troll", FRAMFish = c(34, 35, 36, 38, 39, 42, 43, 79))
+            WAOceanSportRow <- data.frame(Fishery = "WA Ocean Sport", FRAMFish = c(33, 37, 40, 41, 45, 48, 49))
+            SofFRow <- data.frame(Fishery = "S of Falcon All", FRAMFish = c(1,2,3,4,5,6,7,8,9,19,11,12,13,14,15,16,17,18,19,20,21,22))
+            USJDFRow <- data.frame(Fishery = "U.S. JDF All", FRAMFish = c(44,80,81,91,92))
+            SJINetRow <- data.frame(Fishery = "San Juan Isl Net", FRAMFish = c(87,88,96,97))
+            SJISptRow <- data.frame(Fishery = "San Juan Isl Sport", FRAMFish = c(93))
+            PSSptRow <- data.frame(Fishery = "PS Sport (8-13)", FRAMFish = c(106,107,115,118,129,136,152))
+            PSNetRow <- data.frame(Fishery = "PS Net (8-13)", FRAMFish = c(101,102,109,110,111,112,119,120,121,122,123,124,125,130,
+                                                                           131,132,133,137,138,139,140,141,142,143,144,145,146,153,
+                                                                           154,155,156,157,158,159,160))
+            FWRow <- data.frame(Fishery = "FW Net & Sport", FRAMFish = c(23,24,25,26,27,28,29,30,31,32,46,47,50,51,52,53,54,55,56,57,58,
+                                                                         59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,82,83,
+                                                                         84,85,86,89,90,94,95,98,99,100,103,104,105,108,113,114,116,117,126,127,128,
+                                                                         134,135,147,148,149,150,151,161,162,163,164,165,166))
+            
+            TabFFishDF <<- rbind(BCNCTRRow, BCNCNetRow, BCNCSptRow, BCWCVITrollRow, BCWCVINetRow,
+                                 BCWCVISptRow, BCJSNetRow, BCJSSptRow, BCGSSptRow, BCGSNetRow,
+                                 BCJDFSptRow, BCJDFNetRow, BCFraserRow, SEAKRow, WAOceanTrlRow,
+                                 WAOceanSportRow,SofFRow, USJDFRow, SJINetRow, SJISptRow,
+                                 PSSptRow, PSNetRow, FWRow)
+            
+            #Column 1 labels
+            ColLabs <- c("Fishery","BC No/Cent Troll","BC No/Cent Net","BC No/Cent Sport","BC WCVI Troll","BC WCVI Net",
+                         "BC WCVI Sport","BC JnstStr Net & Trl","BC JnstStr Sport","BC GeoStr Spt & Trl","BC GeoStr Net",
+                         "BC JDF Sport", "BC JDF Net & Troll", "BC Fraser Net & Spt", "B.C. Sub-Total","SEAK All", "WA Ocean Troll",
+                         "WA Ocean Sport", "S of Falcon All","U.S. JDF All","San Juan Isl Net","San Juan Isl Sport","PS Sport (8-13)",
+                         "PS Net (8-13)", "FW Net & Sport", "U.S. Sub-Total", "Total ER", "Escapement", "Cohort (Ocean age-3)",
+                         "Cohort (Jan age-3)")
+            #Set up blank table
+            TableF <- data.frame(matrix(, nrow = 30, ncol = 32))
+            
+            #Add in column 1
+            for (i in 1:length(ColLabs)){
+              TableF[i,1] <- ColLabs[i]
+            }
+            
+            #by stock/year
+            for (i in 1:length(StockList)){
+              # Subsets the stock DF to get the stock of interest
+              TabFSubStockDF <- subset(StockDF, StockName == StockList[i])
+              
+              #Fram stock list
+              TabFFRAMStks <- unique(TabFSubStockDF$FRAMWildStocks)
+              
+              # Subsets escapement DF to get the stock of interest
+              TabFSubEscDF <- subset(EscTab, StockID %in% TabFFRAMStks)
+              
+              # Subsets Mortality DF to get the stock of interest
+              TabFSubMortDF <- subset(MortTab, StockID %in% TabFFRAMStks)
+              
+              for(j in 1:length(YearList)){
+                #Escapement
+                Esc <- sum(subset(TabFSubEscDF, RunYear == YearList[j])$Escapement)
+                
+                #Ocean Age 3 Cohort
+                Ocean3Cohort <- sum(subset(TabFSubEscDF, RunYear == YearList[j])$Escapement) + sum(subset(TabFSubMortDF, RunYear == YearList[j])$TotMort)
+                
+                #Add in year
+                TableF[1,j+1] <- YearList[j]
+                
+                #   #Subsets mortalities to only be from fisheries and year of interest
+                TableF[2,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC No/Cent Troll")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[3,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC No/Cent Net")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[4,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC No/Cent Sport")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[5,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC WCVI Troll")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[6,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC WCVI Net")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[7,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC WCVI Sport")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[8,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC JnstStr Net & Trl")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[9,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC JnstStr Sport")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[10,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC GeoStr Spt & Trl")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[11,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC GeoStr Net")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[12,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC JDF Sport")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[13,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC JDF Net & Troll")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[14,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC Fraser Net & Spt")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[16,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "SEAK All")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[17,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "WA Ocean Troll")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[18,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "WA Ocean Sport")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[19,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "S of Falcon All")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[20,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "U.S. JDF All")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[21,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "San Juan Isl Net")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[22,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "San Juan Isl Sport")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[23,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "PS Sport (8-13)")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[24,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "PS Net (8-13)")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[25,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "FW Net & Sport")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                
+                
+                #Get total rows
+                TableF[15,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery %in% c("BC No/Cent Troll", "BC No/Cent Net", "BC No/Cent Sport", "BC WCVI Troll", "BC WCVI Net", "BC WCVI Sport", "BC JnstStr Net & Trl", "BC JnstStr Sport", "BC GeoStr Spt & Trl", "BC GeoStr Net", "BC JDF Sport", "BC JDF Net & Troll", "BC Fraser Net & Spt"))$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[26,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery %in% c("SEAK All", "WA Ocean Troll", "WA Ocean Sport", "S of Falcon All", "U.S. JDF All", "San Juan Isl Net", "San Juan Isl Sport", "PS Sport (8-13)", "PS Net (8-13)", "FW Net & Sport"))$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                TableF[27,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery %in% c("BC No/Cent Troll", "BC No/Cent Net", "BC No/Cent Sport", "BC WCVI Troll", "BC WCVI Net", "BC WCVI Sport", "BC JnstStr Net & Trl", "BC JnstStr Sport", "BC GeoStr Spt & Trl", "BC GeoStr Net", "BC JDF Sport", "BC JDF Net & Troll", "BC Fraser Net & Spt","SEAK All", "WA Ocean Troll", "WA Ocean Sport", "S of Falcon All", "U.S. JDF All", "San Juan Isl Net", "San Juan Isl Sport", "PS Sport (8-13)", "PS Net (8-13)", "FW Net & Sport"))$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
+                
+                #Gets additional rows -escapement, cohort
+                TableF[28,j+1] <- round(Esc, digits = 0)
+                TableF[29,j+1] <- round(Ocean3Cohort, digits = 0)
+                TableF[30,j+1] <- round(Ocean3Cohort * 1.2317, digits = 0)
+              }
+              #save table F with stock name
+              assign(paste("TableF", i, sep=""), TableF, pos = 1)
+              
+            }
+
+            #Manual table editting/saving
+            
+            #For each table, it is a good idea to rename the first row.  Because table F is the same
+            #data frame used for setting up the output tables, it is easier to do it here rather than the loop above
+            
+            colnames(TableF1) <- TableF1[1, ]
+            TableF1 <- TableF1[-1, ]
+            colnames(TableF2) <- TableF2[1, ]
+            TableF2 <- TableF2[-1, ]
+            colnames(TableF3) <- TableF3[1, ]
+            TableF3 <- TableF3[-1, ]
+            colnames(TableF4) <- TableF4[1, ]
+            TableF4 <- TableF4[-1, ]
+            colnames(TableF5) <- TableF5[1, ]
+            TableF5 <- TableF5[-1, ]
+            colnames(TableF6) <- TableF6[1, ]
+            TableF6 <- TableF6[-1, ]
+            colnames(TableF7) <- TableF7[1, ]
+            TableF7 <- TableF7[-1, ]
+            colnames(TableF8) <- TableF8[1, ]
+            TableF8 <- TableF8[-1, ]
+            colnames(TableF9) <- TableF9[1, ]
+            TableF9 <- TableF9[-1, ]
+            colnames(TableF10) <- TableF10[1, ]
+            TableF10 <- TableF10[-1, ]
+            colnames(TableF11) <- TableF11[1, ]
+            TableF11 <- TableF11[-1, ]
+            colnames(TableF12) <- TableF12[1, ]
+            TableF12 <- TableF12[-1, ]
+            colnames(TableF13) <- TableF13[1, ]
+            TableF13 <- TableF13[-1, ]
+            
+            #For Canadian stocks, change 1998 to 2003 to blanks
+            ColIndex <- which(colnames(TableF10)=="1998")
+            TableF10[,c(ColIndex, ColIndex+1, ColIndex+2, ColIndex+3, ColIndex+4, ColIndex+5)] <- "---"
+            TableF11[,c(ColIndex, ColIndex+1, ColIndex+2, ColIndex+3, ColIndex+4, ColIndex+5)] <- "---"
+            TableF12[,c(ColIndex, ColIndex+1, ColIndex+2, ColIndex+3, ColIndex+4, ColIndex+5)] <- "---"
+            TableF13[,c(ColIndex, ColIndex+1, ColIndex+2, ColIndex+3, ColIndex+4, ColIndex+5)] <- "---"
+            
+            #Save to dropbox; save as a global variable for outputting
+            #These ones are saved as Csvs to allow users to edit them prior to use
+            #In earlier years, FRAM may not be used to create tables.
+            filePath <- file.path(tempdir(), "Table F - Lower Fraser.csv")
+            write.csv(TableF10,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF10 <<- TableF10
+            
+            filePath <- file.path(tempdir(), "Table F - Interior Fraser.csv")
+            write.csv(TableF11,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF11 <<- TableF11
+            
+            filePath <- file.path(tempdir(), "Table F - St of Geo ML.csv")
+            write.csv(TableF12,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF12 <<- TableF12
+            
+            filePath <- file.path(tempdir(), "Table F - St of Geo VI.csv")
+            write.csv(TableF13,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF13 <<- TableF13
+            
+            filePath <- file.path(tempdir(), "Table F - Skagit.csv")
+            write.csv(TableF1,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF1 <<- TableF1
+            
+            filePath <- file.path(tempdir(), "Table F - Stillaguamish.csv")
+            write.csv(TableF2,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF2 <<- TableF2
+            
+            filePath <- file.path(tempdir(), "Table F - Snohomish.csv")
+            write.csv(TableF3,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF3 <<- TableF3
+            
+            filePath <- file.path(tempdir(), "Table F - Hood Canal.csv")
+            write.csv(TableF4,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF4 <<- TableF4
+            
+            filePath <- file.path(tempdir(), "Table F - US JDF.csv")
+            write.csv(TableF5,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF5 <<- TableF5
+            
+            filePath <- file.path(tempdir(), "Table F - Quillayute.csv")
+            write.csv(TableF6,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF6 <<- TableF6
+            
+            filePath <- file.path(tempdir(), "Table F - Hoh.csv")
+            write.csv(TableF7,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF7 <<- TableF7
+            
+            filePath <- file.path(tempdir(), "Table F - Queets.csv")
+            write.csv(TableF8,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF8 <<- TableF8
+            
+            filePath <- file.path(tempdir(), "Table F - Grays Harbor.csv")
+            write.csv(TableF9,filePath)
+            
+            drop_upload(filePath)
+            
+            TableF9 <<- TableF9
+      })
    })
   
   
@@ -933,6 +1299,7 @@ function(input, output, session){
         Rules for running this program:
         - Files on dropbox must be up-to-date
         - There must only be one run in the data base per run year
+        - Data must be processed before F tables can be produced
         
         Thanks for using the tool! 
         
@@ -1026,6 +1393,48 @@ function(input, output, session){
     }
     else if (input$table == "Table 6.3"){
       Tab63DF
+    }
+    else if (input$table == "Table 9"){
+      Tab9
+    }
+    else if (input$table == "Table F - Lower Fraser"){
+      TableF10
+    }
+    else if (input$table == "Table F - Interior Fraser"){
+      TableF11
+    }
+    else if (input$table == "Table F - St of Geo ML"){
+      TableF12
+    }
+    else if (input$table == "Table F - St of Geo VI"){
+      TableF13
+    }
+    else if (input$table == "Table F - Skagit"){
+      TableF1
+    }
+    else if (input$table == "Table F - Stillaguamish"){
+      TableF2
+    }
+    else if (input$table == "Table F - Snohomish"){
+      TableF3
+    }
+    else if (input$table == "Table F - Hood Canal"){
+      TableF4
+    }
+    else if (input$table == "Table F - US JDF"){
+      TableF5
+    }
+    else if (input$table == "Table F - Quillayute"){
+      TableF6
+    }
+    else if (input$table == "Table F - Hoh"){
+      TableF7
+    }
+    else if (input$table == "Table F - Queets"){
+      TableF8
+    }
+    else if (input$table == "Table F - Grays Harbor"){
+      TableF9
     }
   }) 
 }
