@@ -40,7 +40,10 @@ shinyServer(
                               "Figure 7.6", "Figure 7.7", "Figure 7.8", "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13")),
     
       selectInput("table", "Please choose a table to display",
-                  choices = c("None","Table 4.1", "Table 4.2", "Table 6.1", "Table 6.2", "Table 6.3", "Table 9", "Table F - Lower Fraser",
+                  choices = c("None","Table 4.1", "Table 4.2", "Table 6.1", "Table 6.2", "Table 6.3", "Table 9", "Table E - Lower Fraser",
+                              "Table E - Interior Fraser", "Table E - St of Geo ML", "Table E - St of Geo VI", "Table E - Skagit",
+                              "Table E - Stillaguamish", "Table E - Snohomish", "Table E - Hood Canal", "Table E - US JDF",
+                              "Table E - Quillayute", "Table E - Hoh", "Table E - Queets","Table E - Grays Harbor","Table F - Lower Fraser",
                               "Table F - Interior Fraser", "Table F - St of Geo ML", "Table F - St of Geo VI", "Table F - Skagit",
                               "Table F - Stillaguamish", "Table F - Snohomish", "Table F - Hood Canal", "Table F - US JDF",
                               "Table F - Quillayute", "Table F - Hoh", "Table F - Queets", "Table F - Grays Harbor")),

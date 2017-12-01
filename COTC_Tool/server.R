@@ -111,6 +111,21 @@ function(input, output, session){
                                   "https://dl.dropboxusercontent.com/s/p8t646v5rwnqaga/Fig712.jpg",
                                   "https://dl.dropboxusercontent.com/s/f0l65a9pit6fi0d/Fig713.jpg",
                                   "https://dl.dropboxusercontent.com/s/a2mtb0dh15njfl3/Table%209.csv",
+                                  
+                                  "https://dl.dropboxusercontent.com/s/xa24cjc8tj3cy3c/TableE1%20Lower%20Fraser.csv",
+                                  "https://dl.dropboxusercontent.com/s/y324609sm51ck3l/TableE2%20Interior%20Fraser.csv",
+                                  "https://dl.dropboxusercontent.com/s/39vu1uexj7q2x23/TableE3%20Georgia%20Strait%20ML.csv",
+                                  "https://dl.dropboxusercontent.com/s/k3n0icabqyt7c0x/TableE4%20Georgia%20Strait%20VI.csv",
+                                  "https://dl.dropboxusercontent.com/s/azdffjrn23qqwyf/TableE5%20Skagit.csv",
+                                  "https://dl.dropboxusercontent.com/s/r3pwdwf6aol0yei/TableE6%20Stillaguamish.csv",
+                                  "https://dl.dropboxusercontent.com/s/oks451x06msb3m9/TableE7%20Snohomish.csv",
+                                  "https://dl.dropboxusercontent.com/s/viy586snvllk5ep/TableE8%20Hood%20Canal.csv",
+                                  "https://dl.dropboxusercontent.com/s/tzhb6x4irwfl1wv/TableE9%20US%20Strait%20JDF.csv",
+                                  "https://dl.dropboxusercontent.com/s/hj89pnyt9ool026/TableE10%20Quillayute.csv",
+                                  "https://dl.dropboxusercontent.com/s/ldjm30ovei8vw7q/TableE11%20Hoh.csv",
+                                  "https://dl.dropboxusercontent.com/s/oinc0ocu4lc4a5d/TableE12%20Queets.csv",
+                                  "https://dl.dropboxusercontent.com/s/681e4dv68u62nz4/TableE13%20Grays%20Harbor.csv",
+
                                   "https://dl.dropboxusercontent.com/s/3gup4wp347syq6d/Table%20F%20-%20Lower%20Fraser.csv",
                                   "https://dl.dropboxusercontent.com/s/77g6vdw95ggqp1w/Table%20F%20-%20Interior%20Fraser.csv",
                                   "https://dl.dropboxusercontent.com/s/21nczz5t82mf14p/Table%20F%20-%20St%20of%20Geo%20ML.csv",
@@ -127,6 +142,10 @@ function(input, output, session){
                  file.descriptions = c("Figure 4.1", "Figure 4.2", "Figure 4.3", "Table 4.1","Table 4.2", "Figure 5.1", "Table 6.1","Table 6.2",
                                        "Table 6.3","Figure 7.1","Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5", "Figure 7.6", "Figure 7.7", "Figure 7.8",
                                        "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13", "Table 9",
+                                       "Table E - Lower Fraser", "Table E - Interior Fraser", "Table E - St of Geo ML",
+                                       "Table E - St of Geo VI", "Table E - Skagit", "Table E - Stillaguamish",
+                                       "Table E - Snohomish", "Table E - Hood Canal", "Table E - US JDF",
+                                       "Table E - Quillayute", "Table E - Hoh", "Table E - Queets", "Table E - Grays Harbor",
                                        "Table F - Lower Fraser", "Table F - Interior Fraser", "Table F - St of Geo ML", 
                                        "Table F - St of Geo VI", "Table F - Skagit", "Table F - Stillaguamish",
                                        "Table F - Snohomish", "Table F - Hood Canal", "Table F - US JDF",
@@ -1005,6 +1024,47 @@ function(input, output, session){
           
           drop_upload(filePath)
           
+          #Appendix E
+          
+          for (i in 1:length(StockList)){
+            #Switching to local solves issues with assign; you also have to do i <-i and pos =1 in the assign function for this to work
+            local ({
+              
+              i <- i
+              
+              #Gets table name from the order df
+              Tabname <- paste("TableE",as.character(subset(OrderDF, Stock == StockList[i])[1,3]), sep="")
+              
+              TabEDF <- subset(MainDataDF, Stock == StockList[i])
+              
+              TabEDF$Total <- paste(round(TabEDF$TotMort/TabEDF$OceanCohort, digits = 3)*100, "%", sep="")
+              TabEDF$USTot <- paste(round((TabEDF$SUSMort+TabEDF$AKMort)/TabEDF$OceanCohort, digits = 3)*100, "%", sep="")
+              TabEDF$CanTot <- paste(round(TabEDF$CAMort/TabEDF$OceanCohort, digits = 3)*100, "%", sep="")
+              TabEDF$EscRounded <- round(TabEDF$Escapement, digits = 0)
+              
+              KeepCols <- c("RunYear","Total", "USTot", "CanTot", "EscRounded")
+              
+              TabEDF <- TabEDF[ , (names(TabEDF) %in% KeepCols)]
+              
+              ColIndex <- which(colnames(TabEDF)=="RunYear" )
+              colnames(TabEDF)[ColIndex] <- "Catch Year"
+              ColIndex <- which(colnames(TabEDF)=="USTot" )
+              colnames(TabEDF)[ColIndex] <- "U.S. Tot"
+              ColIndex <- which(colnames(TabEDF)=="CanTot" )
+              colnames(TabEDF)[ColIndex] <- "Can Tot"
+              ColIndex <- which(colnames(TabEDF)=="EscRounded" )
+              colnames(TabEDF)[ColIndex] <- "Escapement"
+              
+              #create variable name for later use
+              assign(Tabname, TabEDF, envir = .GlobalEnv, pos = 1)
+              
+              filePath <- file.path(tempdir(), paste(Tabname," ",StockList[i],".csv",sep=""))
+              write.csv(TabEDF,filePath)
+              drop_upload(filePath)
+              
+            })
+          }
+          
           
        })
      })
@@ -1396,6 +1456,45 @@ function(input, output, session){
     }
     else if (input$table == "Table 9"){
       Tab9
+    }
+    else if (input$table == "Table E - Lower Fraser"){
+      TableE1
+    }
+    else if (input$table == "Table E - Interior Fraser"){
+      TableE2
+    }
+    else if (input$table == "Table E - St of Geo ML"){
+      TableE3
+    }
+    else if (input$table == "Table E - St of Geo VI"){
+      TableE4
+    }
+    else if (input$table == "Table E - Skagit"){
+      TableE5
+    }
+    else if (input$table == "Table E - Stillaguamish"){
+      TableE6
+    }
+    else if (input$table == "Table E - Snohomish"){
+      TableE7
+    }
+    else if (input$table == "Table E - Hood Canal"){
+      TableE8
+    }
+    else if (input$table == "Table E - US JDF"){
+      TableE9
+    }
+    else if (input$table == "Table E - Quillayute"){
+      TableE10
+    }
+    else if (input$table == "Table E - Hoh"){
+      TableE11
+    }
+    else if (input$table == "Table E - Queets"){
+      TableE12
+    }
+    else if (input$table == "Table E - Grays Harbor"){
+      TableE13
     }
     else if (input$table == "Table F - Lower Fraser"){
       TableF10
