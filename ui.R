@@ -1,3 +1,6 @@
+#options(rsconnect.max.bundle.size=4000000000)
+#options(shiny.maxRequestSize=4000000000)
+
 #used for sending emails
 library(mailR)
 #used for connecting to db
@@ -15,6 +18,15 @@ library(reshape2)
 #For prepping html tables
 library(knitr)
 library(kableExtra)
+library(later)
+library(pool)
+#library(rsconnect)
+
+#options(rsconnect.max.bundle.size=3145728000)
+#options(shiny.maxRequestSize=3145728000)
+# set instance size for an application
+#configureApp("cotc_tool", size="3X-Large", account = "salmonid")
+#options(java.parameters = "-Xss2560k")
 
 token <- readRDS("droptoken.rds")
 drop_acc(dtoken = token)
@@ -34,7 +46,6 @@ shinyServer(
       textInput("PasswordAdd", "Please enter password to access program functions", ""),
       #Adds a dropdown box
       actionButton("DataProcessButton",label = "Process Data/Create Figures & Tables"),
-      actionButton("DataProcessButton2", label = "Continue Creating Figures & Tables"),
       actionButton("FTableButton",label = "Produce Appendix F Tables"),
       selectInput("graphic", "Please choose a figure to display",
                   choices = c("None", "Figure 4.1", "Figure 4.2", "Figure 4.3", "Figure 5.1", "Figure 7.1", "Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5",

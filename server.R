@@ -1,9 +1,13 @@
 ####################################################################################################
 # CoTC Periodic Report code.  Server.R must be paired with Ui.R
-# Code developed by Derek Dapp (WDFW), Angelika Hagen-breaux (WDFW), and the CoTC
+# 
 # App hosted by Shiny Servers
 ####################################################################################################
 
+#Sets the maximum application memory size to 8100 MB.  This is the maximum that a shiny app can handle.
+#The maximum for a free user of Shiny is approximately 1000 MB
+#options(rsconnect.max.bundle.size=4000000000)
+#options(shiny.maxRequestSize=4000000000)
 
 #used for sending emails
 library(mailR)
@@ -23,6 +27,17 @@ library(reshape2)
 #For prepping html tables
 library(knitr)
 library(kableExtra)
+library(later)
+library(pool)
+#library(rsconnect)
+
+#options(rsconnect.max.bundle.size=3145728000)
+#options(shiny.maxRequestSize=3145728000)
+# set instance size for an application
+#configureApp("cotc_tool", size="xlarge", account = "salmonid")
+options(shiny.fullstacktrace = TRUE)
+#options(java.parameters = "-Xss2560k")
+#rsconnect::showLogs(appName = "cotc_tool", account = "salmonid", appPath = "C:/Users/dappdrd/Desktop/PSC-FRAM-Admin-master/templates/COTC_Tool")
 
 token <- readRDS("droptoken.rds")
 drop_acc(dtoken = token)
@@ -58,11 +73,19 @@ GeoStVIRows <- data.frame(PSCStock = 13, FRAMWildStocks = c(211, 212), StockName
 
 StockDF <<- rbind(SkagitRows, StillyRows, SnohomishRows, HoodCanalRows, JDFRows, QuilRows, HohRows, QueetsRows, GraysHarbRows, LowFRRows, IntFRRows, GeoStMLRows, GeoStVIRows)
 
+#This lists the terminal fisheries in a data frame for use later
+#The TAMM position corresponds to the column at which the stock is found in TAMM table 2
+QueetsTermRow <- data.frame(Stock = "Queets", TerminalFish = c(68,65,69, 66, 67), TAMMPosition = 31)
+QuillayuteTermRow <- data.frame(Stock = "Quillayute", TerminalFish = c(70,71, 72), TAMMPosition = 26)
+HohTermRow <- data.frame(Stock = "Hoh", TerminalFish = c(73,74,75), TAMMPosition = 27)
+GHTermRow <- data.frame(Stock = "Grays Harbor", TerminalFish = c(48, 49, 50, 51, 53, 52, 54, 55, 56, 57, 58, 59, 60, 61), TAMMPosition = 37)
+CoastalTermFishDF <<- rbind(QueetsTermRow, QuillayuteTermRow, HohTermRow, GHTermRow)
+
+TAMMList <<- read.csv("https://dl.dropboxusercontent.com/s/jbclcmqk0xqfnob/TAMMList.csv?dl=1")
 
 #List of Stocks
 StockList <<- as.character(unique(StockDF$StockName))
 
-test <<- data.frame(Test = 1, test2 = 4)
 
 shinyServer(
 function(input, output, session){
@@ -591,7 +614,6 @@ function(input, output, session){
               FigDF$OceanCohortThous <- FigDF$OceanCohort/1000
               
               
-              ##################################
               #This automates finding the max Y scale to use... as well as the breaks for the Y axis
               #First find the max Y value; exclude NAs
               FigMaxY <- max(subset(FigDF$OceanCohortThous, is.na(FigDF$OceanCohortThous) == FALSE))
@@ -605,39 +627,20 @@ function(input, output, session){
               for(b in 2:BreakNum){
                 breaklist <- c(breaklist, b*100)
               }
-
-              breaklist <- breaklist
               
               Fig41 <<- ggplot(FigDF, aes(x=RunYear, y = OceanCohortThous, group = Stock, linetype = Stock, colour = Stock, size = Stock))+
-                geom_line() + theme_bw()+
-                theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-                   panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+                geom_line() + theme_classic()+
+                #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                #   panel.background = element_blank(), axis.line = element_line(colour = "black")) +
                 scale_color_manual(values=c("gray", "black", "black", "black", "gray"))+
                 scale_linetype_manual(values=c("solid", "dashed", "dotted", "solid", "dashed"))+
                 scale_size_manual(values=c(1.2, 1.2, 1.2, 1.2, 1.2))+
                 theme(text = element_text(size=16))+
-                xlab('Catch Year') + ylab('Cohort Size (thousands)') +
+                xlab('Catch Year') + ylab('Cohort Abundance (thousands)') +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1))+
                 guides(colour = guide_legend(override.aes = list(size=.6)))+
-                scale_y_continuous(expand = c(0,0), limits = c(0, FigMaxY), breaks = breaklist)
+                scale_y_continuous(expand = c(0,0), limits = c(0, FigMaxY), breaks = breaklist)+geom_hline(yintercept = breaklist)
               
-              # Fig41 <<- ggplot(FigDF, aes(x=RunYear, y = OceanCohortThous, group = Stock, linetype = Stock, colour = Stock, size = Stock))+
-              # geom_line() + theme_bw()+
-              # theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-              #       panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-              # scale_color_manual(values=c("gray", "black", "black", "black", "gray"))+
-              # scale_linetype_manual(values=c("solid", "dashed", "dotted", "solid", "dashed"))+
-              # scale_size_manual(values=c(1.2, 1.2, 1.2, 1.2, 1.2))+
-              # theme(text = element_text(size=16))+
-              # xlab('Catch Year') + ylab('Cohort Size (thousands)') +
-              # theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-              # guides(colour = guide_legend(override.aes = list(size=.6)))+
-              # scale_y_continuous(expand = c(0, 0))+
-              # #scale_y_continuous(expand = c(0, 0), limits = c(0, FigMaxY), breaks = breaklist)+
-              # theme(panel.grid.major.y = element_line(color = "black"))+
-              # scale_x_discrete(expand = c(0,0))
-              
-              ###################################
            
               filePath <- file.path(tempdir(), FigName)
               ggsave(Fig41, file = filePath, width = 12, height = 6)
@@ -653,18 +656,33 @@ function(input, output, session){
               FigDF <- subset(MainDataDF, Stock %in% FigStocks)
            
               FigDF$OceanCohortThous <- FigDF$OceanCohort/1000
+              
+              #This automates finding the max Y scale to use... as well as the breaks for the Y axis
+              #First find the max Y value; exclude NAs
+              FigMaxY <- max(subset(FigDF$OceanCohortThous, is.na(FigDF$OceanCohortThous) == FALSE))
+              #Next round up to the nearest 50, then increase by 500, just to ensure that there is sufficient room
+              #This must be a global variable to be used in the figure, which is a global figure
+              FigMaxY <- round_any(FigMaxY, 50, f = ceiling) +50
+              #Next find the number of breaks to use
+              BreakNum <- FigMaxY/50
+              breaklist <- c(0, 50)
+              #Get breaks...
+              for(b in 2:BreakNum){
+                breaklist <- c(breaklist, b*50)
+              }
            
               Fig42 <<- ggplot(FigDF, aes(x=RunYear, y = OceanCohortThous, group = Stock, linetype = Stock, colour = Stock, size = Stock))+
-                geom_line() + theme_bw()+
-                theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-                   panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+                geom_line() + theme_classic()+
+                #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                #   panel.background = element_blank(), axis.line = element_line(colour = "black")) +
                 scale_color_manual(values=c("black", "black", "black", "gray", "gray"))+
                 scale_linetype_manual(values=c("solid", "dashed", "dotted", "solid", "dashed"))+
                 scale_size_manual(values=c(1.2, 1.2, 1.2, 1.2, 1.2))+
                 theme(text = element_text(size=16))+
-                xlab('Catch Year') + ylab('Cohort Size (thousands)') +
+                xlab('Catch Year') + ylab('Cohort Abundance (thousands)') +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-                guides(colour = guide_legend(override.aes = list(size=.6)))
+                guides(colour = guide_legend(override.aes = list(size=.6)))+
+                scale_y_continuous(expand = c(0,0), limits = c(0, FigMaxY), breaks = breaklist) + geom_hline(yintercept = breaklist)
            
               filePath <- file.path(tempdir(), FigName)
               ggsave(Fig42, file = filePath, width = 12, height = 6)
@@ -679,18 +697,33 @@ function(input, output, session){
               FigDF <- subset(MainDataDF, Stock %in% FigStocks)
            
               FigDF$OceanCohortThous <- FigDF$OceanCohort/1000
+              
+              #This automates finding the max Y scale to use... as well as the breaks for the Y axis
+              #First find the max Y value; exclude NAs
+              FigMaxY <- max(subset(FigDF$OceanCohortThous, is.na(FigDF$OceanCohortThous) == FALSE))
+              #Next round up to the nearest 20, then increase by 20, just to ensure that there is sufficient room
+              #This must be a global variable to be used in the figure, which is a global figure
+              FigMaxY <- round_any(FigMaxY, 20, f = ceiling) +20
+              #Next find the number of breaks to use
+              BreakNum <- FigMaxY/20
+              breaklist <- c(0, 20)
+              #Get breaks...
+              for(b in 2:BreakNum){
+                breaklist <- c(breaklist, b*20)
+              }
            
               Fig43 <<- ggplot(FigDF, aes(x=RunYear, y = OceanCohortThous, group = Stock, linetype = Stock, colour = Stock, size = Stock))+
-                geom_line() + theme_bw()+
-                theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-                   panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+                geom_line() + theme_classic()+
+                #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                #   panel.background = element_blank(), axis.line = element_line(colour = "black")) +
                 scale_color_manual(values=c("black", "black", "black", "gray", "gray"))+
                 scale_linetype_manual(values=c("solid", "dashed", "dotted", "solid", "dashed"))+
                 scale_size_manual(values=c(1.2, 1.2, 1.2, 1.2, 1.2))+
                 theme(text = element_text(size=16))+
-                xlab('Catch Year') + ylab('Cohort Size (thousands)') +
+                xlab('Catch Year') + ylab('Cohort Abundance (thousands)') +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-                guides(colour = guide_legend(override.aes = list(size=.6)))
+                guides(colour = guide_legend(override.aes = list(size=.6)))+
+                scale_y_continuous(expand = c(0,0), limits = c(0, FigMaxY), breaks = breaklist) + geom_hline(yintercept = breaklist)
            
               filePath <- file.path(tempdir(), FigName)
               ggsave(Fig43, file = filePath, width = 12, height = 6)
@@ -700,6 +733,42 @@ function(input, output, session){
           }
           
           incProgress(3/5, detail = "Preparing figure 5.1")
+          
+          #Preparing figure 5.1 (total fishery mortality of all management units combined, by CA and US)
+          Fig51DF <- ddply(MainDataDF, "RunYear",  numcolwise(sum))
+          Fig51DF$USMort <- Fig51DF$SUSMort + Fig51DF$AKMort
+
+          #Reorganizes the data for plotting
+          Fig51DF <- melt(Fig51DF, id.vars = "RunYear", measure.vars = c("CAMort", "USMort"))
+          
+          #First find the max Y value; exclude NAs
+          FigMaxY <- max(subset(Fig51DF$value, is.na(Fig51DF$value) == FALSE))/1000000
+          #Next round up to the nearest 20, then increase by 20, just to ensure that there is sufficient room
+          #This must be a global variable to be used in the figure, which is a global figure
+          FigMaxY <- round_any(FigMaxY, .2, f = ceiling)
+          #Next find the number of breaks to use
+          BreakNum <- FigMaxY/.2
+          breaklist <- c(0, .2)
+          #Get breaks...
+          for(b in 2:BreakNum){
+            breaklist <- c(breaklist, b*.2)
+          }
+          Fig51 <<- ggplot(Fig51DF, aes(x=RunYear, y = (value/1000000),  size = variable, linetype = variable, group = variable))+
+            geom_line() + theme_classic()+
+            #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+            #      panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+            scale_linetype_manual(values=c("dashed", "solid"), name = "", labels = c("Canada", "US"))+
+            scale_size_manual(values=c(1.2, 1.2), name="", label=c("Canada", "US"))+
+            theme(text = element_text(size=16))+
+            xlab('Catch Year') + ylab('Total Mortality (Millions)') +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+            guides(linetype = guide_legend(override.aes = list(size=.6)))+
+            scale_y_continuous(expand = c(0,0), limits = c(0, FigMaxY), breaks = breaklist) + geom_hline(yintercept = breaklist)
+
+          filePath <- file.path(tempdir(), "Figure 5.1.jpg")
+          ggsave(Fig51, file = filePath, width = 12, height = 6)
+
+          drop_upload(filePath)
           
          
           incProgress(4/5, detail = "Preparing figures 7.1 to 7.13")
@@ -720,6 +789,90 @@ function(input, output, session){
           
           
           OrderDF <<- rbind(OrdRow1,OrdRow2,OrdRow3,OrdRow4,OrdRow5,OrdRow6,OrdRow7,OrdRow8,OrdRow9,OrdRow10,OrdRow11,OrdRow12,OrdRow13)
+          
+          #Figures 7.1-7.13
+          for (i in 1:length(StockList)){
+            #Switching to local solves issues with assign; you also have to do i <-i and pos =1 in the assign function for this to work
+            local ({
+              
+              i <- i
+              #Gets figure name from the order df
+              Figname <- as.character(subset(OrderDF, Stock == StockList[i])[1,1])
+              
+              Fig7DF <- subset(MainDataDF, Stock == StockList[i])
+              
+              #if in a Canadian stock, do not include 1998-2003, 
+              if (StockList[i] == "Lower Fraser" | StockList[i] == "Interior Fraser" | StockList[i] == "Georgia Strait ML" | StockList[i] == "Georgia Strait VI"){
+                Fig7DF$Escapement[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
+                Fig7DF$CAMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
+                Fig7DF$SUSMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
+                Fig7DF$AKMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
+              }
+              
+              #Get morts in terms of ER
+              Fig7DF$USER <- (Fig7DF$SUSMort + Fig7DF$AKMort)/Fig7DF$OceanCohort
+              Fig7DF$CAER <- Fig7DF$CAMort/Fig7DF$OceanCohort
+              
+              #Combine the datasets into a usable format for stacked barplots
+              Melted7DF <- melt(Fig7DF, id.vars = "RunYear", measure.vars = c("CAER", "USER"))
+              
+              #DF with just escapements
+              Fig7Esc <- Fig7DF[ , (names(Fig7DF) %in% c("RunYear", "Escapement"))]
+              
+              #adds in escapements to the DF
+              Melted7DF <- merge(Melted7DF, Fig7Esc , by= "RunYear")
+              
+              #Gets readjustment scale
+              maxy <- sort(Fig7Esc$Escapement, decreasing = TRUE)[1] +500
+              
+              #Find the number of breaks to use
+              #For the purposes of automating, lets make the secondary axis 8 breaks
+              BreakDelineations <- maxy/8
+              BreakDelineations <- ceiling(BreakDelineations/1000)*1000
+              breaklist <- c(0, BreakDelineations)
+              #Get breaks...
+              for(b in 2:8){
+                breaklist <- c(breaklist, b*BreakDelineations)
+              }
+              
+              #create variable name for later use
+              assign(Figname, ggplot(Melted7DF, aes(x = RunYear, y = value, fill = variable))+
+                       geom_hline(yintercept = c(0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1)) +
+                       geom_bar(stat = "identity", colour = "black") + theme_classic()+
+                       #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                       #      panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+                       theme(text = element_text(size=16))+
+                       xlab('Catch Year') + ylab('Total Exploitation Rate') +
+                       theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+                       scale_fill_manual("legend", values = c("USER" = "gray47", "CAER" = "gray87"), labels = c("Canada", "US"))+
+                       theme(legend.title=element_blank())+
+                       #Second axis must get rescaled according to the scaling below
+                       scale_y_continuous(expand = c(0,0), lim = c(0,1),breaks = c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1),sec.axis = sec_axis(~.*(BreakDelineations*8), name = "Escapement", breaks = breaklist))+
+                       #Escapements must get rescaled to match axes
+                       geom_line(aes(y = Escapement/maxy), group = 1, size = 1.2) + ggtitle(StockList[i]), envir = .GlobalEnv, pos = 1)
+              
+              
+              # save file for dropbox
+              filePath <- file.path(tempdir(), paste(Figname,".jpg",sep=""))
+              ggsave(ggplot(Melted7DF, aes(x = RunYear, y = value, fill = variable))+
+                       geom_hline(yintercept = c(0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1)) +
+                       geom_bar(stat = "identity", colour = "black") + theme_classic()+
+                       #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                       #      panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+                       theme(text = element_text(size=16)) +
+                       xlab('Catch Year') + ylab('Total Exploitation Rate') +
+                       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                       scale_fill_manual("legend", values = c("USER" = "gray47", "CAER" = "gray87"), labels = c("Canada", "US")) +
+                       theme(legend.title=element_blank()) +
+                       #Second axis must get rescaled according to the scaling below
+                       scale_y_continuous(expand = c(0,0), lim = c(0,1),breaks = c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1),sec.axis = sec_axis(~.*(BreakDelineations*8), name = "Escapement", breaks = breaklist)) +
+                       #Escapements must get rescaled to match axes
+                       geom_line(aes(y = Escapement/maxy), group = 1, size = 1.2), file = filePath, width = 12, height = 6)
+
+              
+              drop_upload(filePath)
+            })
+          }
           
           
           incProgress(5/5, detail = "Tables")
@@ -1021,122 +1174,14 @@ function(input, output, session){
      })
    })
    
-   
-   
-   #Extra button for continued processing, necessary since the program is so big
-   #Additional memory on the server costs extra and Im cheap :(
-   observe({
-     if (input$DataProcessButton2 == 0 | input$PasswordAdd != Password)
-       return(NULL)
-     isolate({
-       
-       #Preparing figure 5.1 (total fishery mortality of all management units combined, by CA and US)
-       Fig51DF <- ddply(MainDataDF, "RunYear",  numcolwise(sum))
-       Fig51DF$USMort <- Fig51DF$SUSMort + Fig51DF$AKMort
-       
-       #Reorganizes the data for plotting
-       Fig51DF <- melt(Fig51DF, id.vars = "RunYear", measure.vars = c("CAMort", "USMort"))
-       
-       Fig51 <<- ggplot(Fig51DF, aes(x=RunYear, y = (value/1000000),  size = variable, linetype = variable, group = variable))+
-         geom_line() + theme_bw()+
-         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-               panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-         scale_linetype_manual(values=c("dashed", "solid"), name = "", labels = c("Canada", "US"))+
-         scale_size_manual(values=c(1.2, 1.2), name="", label=c("Canada", "US"))+
-         theme(text = element_text(size=16))+
-         xlab('Catch Year') + ylab('Total Mortality (Millions)') +
-         theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-         guides(linetype = guide_legend(override.aes = list(size=.6)))
-       
-       filePath <- file.path(tempdir(), "Figure 5.1.jpg")
-       ggsave(Fig51, file = filePath, width = 12, height = 6)
-       
-       drop_upload(filePath)
-       
-  
-       #Figures 7.1-7.13
-       for (i in 1:length(StockList)){
-         #Switching to local solves issues with assign; you also have to do i <-i and pos =1 in the assign function for this to work
-         local ({
-           
-           i <- i
-           #Gets figure name from the order df
-           Figname <- as.character(subset(OrderDF, Stock == StockList[i])[1,1])
-           
-           Fig7DF <- subset(MainDataDF, Stock == StockList[i])
-           
-           #if in a Canadian stock, do not include 1998-2003, 
-           if (StockList[i] == "Lower Fraser" | StockList[i] == "Interior Fraser" | StockList[i] == "Georgia Strait ML" | StockList[i] == "Georgia Strait VI"){
-             Fig7DF$Escapement[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
-             Fig7DF$CAMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
-             Fig7DF$SUSMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
-             Fig7DF$AKMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
-           }
-           
-           #Get morts in terms of ER
-           Fig7DF$USER <- (Fig7DF$SUSMort + Fig7DF$AKMort)/Fig7DF$OceanCohort
-           Fig7DF$CAER <- Fig7DF$CAMort/Fig7DF$OceanCohort
-           
-           #Combine the datasets into a usable format for stacked barplots
-           Melted7DF <- melt(Fig7DF, id.vars = "RunYear", measure.vars = c("CAER", "USER"))
-           
-           #DF with just escapements
-           Fig7Esc <- Fig7DF[ , (names(Fig7DF) %in% c("RunYear", "Escapement"))]
-           
-           #adds in escapements to the DF
-           Melted7DF <- merge(Melted7DF, Fig7Esc , by= "RunYear")
-           
-           #Gets readjustment scale
-           maxy <- sort(Fig7Esc$Escapement, decreasing = TRUE)[1] +500
-           
-           #create variable name for later use
-           assign(Figname, ggplot(Melted7DF, aes(x = RunYear, y = value, fill = variable))+
-                    geom_bar(stat = "identity", colour = "black") + theme_bw()+
-                    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-                          panel.background = element_blank(), axis.line = element_line(colour = "black"))+
-                    theme(text = element_text(size=16))+
-                    xlab('Catch Year') + ylab('Total Exploitation Rate') +
-                    theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-                    scale_fill_manual("legend", values = c("USER" = "gray47", "CAER" = "gray87"), labels = c("Canada", "US"))+
-                    theme(legend.title=element_blank())+
-                    #Second axis must get rescaled according to the scaling below
-                    scale_y_continuous(lim = c(0,1),sec.axis = sec_axis(~.*maxy, name = "Escapement"))+
-                    #Escapements must get rescaled to match axes
-                    geom_line(aes(y = Escapement/maxy), group = 1, size = 1.2)+ggtitle(StockList[i]), envir = .GlobalEnv, pos = 1)
-           
-           # save file for dropbox
-           filePath <- file.path(tempdir(), paste(Figname,".jpg",sep=""))
-           ggsave(ggplot(Melted7DF, aes(x = RunYear, y = value, fill = variable))+
-                    geom_bar(stat = "identity", colour = "black") + theme_bw()+
-                    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-                          panel.background = element_blank(), axis.line = element_line(colour = "black"))+
-                    theme(text = element_text(size=16))+
-                    xlab('Catch Year') + ylab('Total Exploitation Rate') +
-                    theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-                    scale_fill_manual("legend", values = c("USER" = "gray47", "CAER" = "gray87"), labels = c("Canada", "US"))+
-                    theme(legend.title=element_blank())+
-                    #Second axis must get rescaled according to the scaling below
-                    scale_y_continuous(lim = c(0,1),sec.axis = sec_axis(~.*maxy, name = "Escapement"))+
-                    #Escapements must get rescaled to match axes
-                    geom_line(aes(y = Escapement/maxy), group = 1, size = 1.2), file = filePath, width = 12, height = 6)
-           
-           drop_upload(filePath)
-         })
-        }
-       
-     })
-   })
-   
-   
-   
-   
-   
+
    
    #Extra button for F tables, which take up a large amount of server memory
    observe({
       if (input$FTableButton == 0 | input$PasswordAdd != Password)
         return(NULL)
       isolate({
+        Notif <- showNotification("Please allow a few minutes to produce F tables (message will disappear when processing is complete)", closeButton = FALSE, duration = NULL)
             #Appendix F tables
             #Aggregate fisheries into groupings
             BCNCTRRow <- data.frame(Fishery = "BC No/Cent Troll", FRAMFish = c(171,172,173))
@@ -1189,31 +1234,31 @@ function(input, output, session){
             for (i in 1:length(ColLabs)){
               TableF[i,1] <- ColLabs[i]
             }
-            
+
             #by stock/year
             for (i in 1:length(StockList)){
               # Subsets the stock DF to get the stock of interest
               TabFSubStockDF <- subset(StockDF, StockName == StockList[i])
-              
+
               #Fram stock list
               TabFFRAMStks <- unique(TabFSubStockDF$FRAMWildStocks)
-              
+
               # Subsets escapement DF to get the stock of interest
               TabFSubEscDF <- subset(EscTab, StockID %in% TabFFRAMStks)
-              
+
               # Subsets Mortality DF to get the stock of interest
               TabFSubMortDF <- subset(MortTab, StockID %in% TabFFRAMStks)
-              
+
               for(j in 1:length(YearList)){
                 #Escapement
                 Esc <- sum(subset(TabFSubEscDF, RunYear == YearList[j])$Escapement)
-                
+
                 #Ocean Age 3 Cohort
                 Ocean3Cohort <- sum(subset(TabFSubEscDF, RunYear == YearList[j])$Escapement) + sum(subset(TabFSubMortDF, RunYear == YearList[j])$TotMort)
-                
+
                 #Add in year
                 TableF[1,j+1] <- YearList[j]
-                
+
                 #   #Subsets mortalities to only be from fisheries and year of interest
                 TableF[2,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC No/Cent Troll")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
                 TableF[3,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "BC No/Cent Net")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
@@ -1238,13 +1283,13 @@ function(input, output, session){
                 TableF[23,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "PS Sport (8-13)")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
                 TableF[24,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "PS Net (8-13)")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
                 TableF[25,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery == "FW Net & Sport")$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
-                
-                
+
+
                 #Get total rows
                 TableF[15,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery %in% c("BC No/Cent Troll", "BC No/Cent Net", "BC No/Cent Sport", "BC WCVI Troll", "BC WCVI Net", "BC WCVI Sport", "BC JnstStr Net & Trl", "BC JnstStr Sport", "BC GeoStr Spt & Trl", "BC GeoStr Net", "BC JDF Sport", "BC JDF Net & Troll", "BC Fraser Net & Spt"))$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
                 TableF[26,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery %in% c("SEAK All", "WA Ocean Troll", "WA Ocean Sport", "S of Falcon All", "U.S. JDF All", "San Juan Isl Net", "San Juan Isl Sport", "PS Sport (8-13)", "PS Net (8-13)", "FW Net & Sport"))$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
                 TableF[27,j+1] <- paste(round(sum(subset(TabFSubMortDF, RunYear == YearList[j] & FisheryID %in% unique(subset(TabFFishDF, Fishery %in% c("BC No/Cent Troll", "BC No/Cent Net", "BC No/Cent Sport", "BC WCVI Troll", "BC WCVI Net", "BC WCVI Sport", "BC JnstStr Net & Trl", "BC JnstStr Sport", "BC GeoStr Spt & Trl", "BC GeoStr Net", "BC JDF Sport", "BC JDF Net & Troll", "BC Fraser Net & Spt","SEAK All", "WA Ocean Troll", "WA Ocean Sport", "S of Falcon All", "U.S. JDF All", "San Juan Isl Net", "San Juan Isl Sport", "PS Sport (8-13)", "PS Net (8-13)", "FW Net & Sport"))$FRAMFish))$TotMort)/Ocean3Cohort, digits = 4) * 100, "%",sep="")
-                
+
                 #Gets additional rows -escapement, cohort
                 TableF[28,j+1] <- round(Esc, digits = 0)
                 TableF[29,j+1] <- round(Ocean3Cohort, digits = 0)
@@ -1252,14 +1297,14 @@ function(input, output, session){
               }
               #save table F with stock name
               assign(paste("TableF", i, sep=""), TableF, pos = 1)
-              
+
             }
 
             #Manual table editting/saving
-            
+
             #For each table, it is a good idea to rename the first row.  Because table F is the same
             #data frame used for setting up the output tables, it is easier to do it here rather than the loop above
-            
+
             colnames(TableF1) <- TableF1[1, ]
             TableF1 <- TableF1[-1, ]
             colnames(TableF2) <- TableF2[1, ]
@@ -1286,107 +1331,110 @@ function(input, output, session){
             TableF12 <- TableF12[-1, ]
             colnames(TableF13) <- TableF13[1, ]
             TableF13 <- TableF13[-1, ]
-            
+
             #For Canadian stocks, change 1998 to 2003 to blanks
             ColIndex <- which(colnames(TableF10)=="1998")
             TableF10[,c(ColIndex, ColIndex+1, ColIndex+2, ColIndex+3, ColIndex+4, ColIndex+5)] <- "---"
             TableF11[,c(ColIndex, ColIndex+1, ColIndex+2, ColIndex+3, ColIndex+4, ColIndex+5)] <- "---"
             TableF12[,c(ColIndex, ColIndex+1, ColIndex+2, ColIndex+3, ColIndex+4, ColIndex+5)] <- "---"
             TableF13[,c(ColIndex, ColIndex+1, ColIndex+2, ColIndex+3, ColIndex+4, ColIndex+5)] <- "---"
-            
+
             #Save to dropbox; save as a global variable for outputting
             #These ones are saved as Csvs to allow users to edit them prior to use
             #In earlier years, FRAM may not be used to create tables.
             filePath <- file.path(tempdir(), "Table F - Lower Fraser.csv")
             write.csv(TableF10,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF10 <<- TableF10
-            
+
             filePath <- file.path(tempdir(), "Table F - Interior Fraser.csv")
             write.csv(TableF11,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF11 <<- TableF11
-            
+
             filePath <- file.path(tempdir(), "Table F - St of Geo ML.csv")
             write.csv(TableF12,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF12 <<- TableF12
-            
+
             filePath <- file.path(tempdir(), "Table F - St of Geo VI.csv")
             write.csv(TableF13,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF13 <<- TableF13
-            
+
             filePath <- file.path(tempdir(), "Table F - Skagit.csv")
             write.csv(TableF1,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF1 <<- TableF1
-            
+
             filePath <- file.path(tempdir(), "Table F - Stillaguamish.csv")
             write.csv(TableF2,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF2 <<- TableF2
-            
+
             filePath <- file.path(tempdir(), "Table F - Snohomish.csv")
             write.csv(TableF3,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF3 <<- TableF3
-            
+
             filePath <- file.path(tempdir(), "Table F - Hood Canal.csv")
             write.csv(TableF4,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF4 <<- TableF4
-            
+
             filePath <- file.path(tempdir(), "Table F - US JDF.csv")
             write.csv(TableF5,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF5 <<- TableF5
-            
+
             filePath <- file.path(tempdir(), "Table F - Quillayute.csv")
             write.csv(TableF6,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF6 <<- TableF6
-            
+
             filePath <- file.path(tempdir(), "Table F - Hoh.csv")
             write.csv(TableF7,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF7 <<- TableF7
-            
+
             filePath <- file.path(tempdir(), "Table F - Queets.csv")
             write.csv(TableF8,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF8 <<- TableF8
-            
+
             filePath <- file.path(tempdir(), "Table F - Grays Harbor.csv")
             write.csv(TableF9,filePath)
-            
+
             drop_upload(filePath)
-            
+
             TableF9 <<- TableF9
+            
+            removeNotification(Notif)
+            
       })
    })
   
