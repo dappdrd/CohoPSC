@@ -41,7 +41,7 @@ options(shiny.fullstacktrace = TRUE)
 #options(java.parameters = "-Xss2560k")
 #rsconnect::showLogs(appName = "cotc_tool", account = "salmonid", appPath = "C:/Users/dappdrd/Desktop/PSC-FRAM-Admin-master/templates/COTC_Tool")
 
-token <- readRDS("droptoken.rds")
+token <- readRDS("droptoken_PSC_CoTC_Dropbox.rds")
 drop_acc(dtoken = token)
 
 Password <<- "rjdio"
@@ -83,7 +83,11 @@ HohTermRow <- data.frame(Stock = "Hoh", TerminalFish = c(73,74,75), TAMMPosition
 GHTermRow <- data.frame(Stock = "Grays Harbor", TerminalFish = c(48, 49, 50, 51, 53, 52, 54, 55, 56, 57, 58, 59, 60, 61), TAMMPosition = 37)
 CoastalTermFishDF <<- rbind(QueetsTermRow, QuillayuteTermRow, HohTermRow, GHTermRow)
 
-TAMMList<<-drop_read_csv("Input Files/TAMMList.csv",sep=",",dtoken=token)
+TAMMList<<-drop_read_csv("InputTemplates/Periodic and Annual Report Tool/TAMMList.csv",sep=",",dtoken=token)
+
+#Alternative way of reading in CSVs.
+#The above way is preferred because it downloads based upon the name of the file.
+#The method below breaks if a file is deleted on Dropbox, but is later readded.
 #TAMMList <<- read.csv("https://dl.dropboxusercontent.com/s/jbclcmqk0xqfnob/TAMMList.csv?dl=1")
 
 #List of Stocks
@@ -121,57 +125,117 @@ function(input, output, session){
                  smtp = list(host.name = "smtp.gmail.com", port = 465, user.name = "derek.dapp.dfw@gmail.com", passwd = "FakePass2", ssl = TRUE),
                  authenticate = TRUE,
                  send = TRUE,
-                 attach.files = c("https://dl.dropboxusercontent.com/s/jti9io6bufr0k4j/Figure%204.1.jpg",
-                                  "https://dl.dropboxusercontent.com/s/2twmtoi8m1sur4r/Figure%204.2.jpg",
-                                  "https://dl.dropboxusercontent.com/s/9t2ozw5ir86covl/Figure%204.3.jpg", 
-                                  "https://dl.dropboxusercontent.com/s/3cmw8yda3677ls5/Table%204.1%20html.txt",
-                                  "https://dl.dropboxusercontent.com/s/cih9ma0vtly8a72/Table%204.2%20html.txt",
-                                  "https://dl.dropboxusercontent.com/s/4g48qbf6kstpb6d/Figure%205.1.jpg",
-                                  "https://dl.dropboxusercontent.com/s/38bwwvqhavtgw5p/Table%206.1%20html.txt",
-                                  "https://dl.dropboxusercontent.com/s/42hz2sen7szcfps/Table%206.2%20html.txt",
-                                  "https://dl.dropboxusercontent.com/s/4n3k8gatiskppa2/Table%206.3%20html.txt",
-                                  "https://dl.dropboxusercontent.com/s/kuhyt00y4kr2ivf/Fig71.jpg",
-                                  "https://dl.dropboxusercontent.com/s/kqz9jx32h6aiek0/Fig72.jpg",
-                                  "https://dl.dropboxusercontent.com/s/tuya8vhn9ayrg1f/Fig73.jpg",
-                                  "https://dl.dropboxusercontent.com/s/nvx6tjaqat1wc8n/Fig74.jpg",
-                                  "https://dl.dropboxusercontent.com/s/3uk4kktxlt9kdtp/Fig75.jpg",
-                                  "https://dl.dropboxusercontent.com/s/dnal6uhxcyughbe/Fig76.jpg",
-                                  "https://dl.dropboxusercontent.com/s/bst9kdx5pnya8zi/Fig77.jpg",
-                                  "https://dl.dropboxusercontent.com/s/8vvmquab1z6o7od/Fig78.jpg",
-                                  "https://dl.dropboxusercontent.com/s/izk583dv0v39vi9/Fig79.jpg",
-                                  "https://dl.dropboxusercontent.com/s/rwvdcqwk410mrrv/Fig710.jpg",
-                                  "https://dl.dropboxusercontent.com/s/tri09bacabye2kq/Fig711.jpg",
-                                  "https://dl.dropboxusercontent.com/s/p8t646v5rwnqaga/Fig712.jpg",
-                                  "https://dl.dropboxusercontent.com/s/f0l65a9pit6fi0d/Fig713.jpg",
-                                  "https://dl.dropboxusercontent.com/s/a2mtb0dh15njfl3/Table%209.csv",
+                 
+                 attach.files = c("https://dl.dropboxusercontent.com/s/hcs00f0905rjzhs/Figure%204.1.jpg",
+                                  "https://dl.dropboxusercontent.com/s/3uqyu575wh7gqy1/Figure%204.2.jpg",
+                                  "https://dl.dropboxusercontent.com/s/1pgvvbk4pybdlsq/Figure%204.3.jpg",
+                                  "https://dl.dropboxusercontent.com/s/jfixoelgmy1ul1j/Table%204.1.csv",
+                                  "https://dl.dropboxusercontent.com/s/80o48hz7cj37twp/Table%204.2.csv",
+                                  "https://dl.dropboxusercontent.com/s/gv8sv9pskzupmbz/Figure%205.1.jpg",
+                                  "https://dl.dropboxusercontent.com/s/krqxxql4rqegx0y/Table%206.1.csv",
+                                  "https://dl.dropboxusercontent.com/s/k3xr5opc1w68xiv/Table%206.2.csv",
+                                  "https://dl.dropboxusercontent.com/s/f88449fcv6f95cl/Table%206.3.csv",
+                                  "https://dl.dropboxusercontent.com/s/6egvsdm8kdlnrtt/Fig71.jpg",
+                                  "https://dl.dropboxusercontent.com/s/l9s9n9naywttg9k/Fig72.jpg",
+                                  "https://dl.dropboxusercontent.com/s/0kj2z9xhy8ule61/Fig73.jpg",
+                                  "https://dl.dropboxusercontent.com/s/d90nw2mwz8n2bh3/Fig74.jpg",
+                                  "https://dl.dropboxusercontent.com/s/g5q7eovqmc073th/Fig75.jpg",
+                                  "https://dl.dropboxusercontent.com/s/mqg6niijeveg23e/Fig76.jpg",
+                                  "https://dl.dropboxusercontent.com/s/7m2swe2inmasiyt/Fig77.jpg",
+                                  "https://dl.dropboxusercontent.com/s/6hz71gw1ccknvx2/Fig78.jpg",
+                                  "https://dl.dropboxusercontent.com/s/5zvr70kzybd8371/Fig79.jpg",
+                                  "https://dl.dropboxusercontent.com/s/wbjf63f3gqttg3s/Fig710.jpg",
+                                  "https://dl.dropboxusercontent.com/s/hj74qaq5qdhyn71/Fig711.jpg",
+                                  "https://dl.dropboxusercontent.com/s/8p5j3gth98o24ia/Fig712.jpg",
+                                  "https://dl.dropboxusercontent.com/s/zesrv0febmbvxe9/Fig713.jpg",
+                                  "https://dl.dropboxusercontent.com/s/myc03momk2prex0/Table%209.csv",
+                                   
+                                  "https://dl.dropboxusercontent.com/s/qmmnqsjdqribu5e/TableE1%20Lower%20Fraser.csv",
+                                  "https://dl.dropboxusercontent.com/s/adija3qadrzjcl6/TableE2%20Interior%20Fraser.csv",
+                                  "https://dl.dropboxusercontent.com/s/mrtimsg8r2z528q/TableE3%20Georgia%20Strait%20ML.csv",
+                                  "https://dl.dropboxusercontent.com/s/lqc80r3adzd69h6/TableE4%20Georgia%20Strait%20VI.csv",
+                                  "https://dl.dropboxusercontent.com/s/idf9p6dpmxz6i0m/TableE5%20Skagit.csv",
+                                  "https://dl.dropboxusercontent.com/s/5wlmcql49b8xyoy/TableE6%20Stillaguamish.csv",
+                                  "https://dl.dropboxusercontent.com/s/q2rnre6fjne4wm2/TableE7%20Snohomish.csv",
+                                  "https://dl.dropboxusercontent.com/s/8tu0zwh7le45nxd/TableE8%20Hood%20Canal.csv",
+                                  "https://dl.dropboxusercontent.com/s/pztmval5grcvkf7/TableE9%20US%20Strait%20JDF.csv",
+                                  "https://dl.dropboxusercontent.com/s/yze2un9drmvallq/TableE10%20Quillayute.csv",
+                                  "https://dl.dropboxusercontent.com/s/89dubn1k3tu8y4n/TableE11%20Hoh.csv",
+                                  "https://dl.dropboxusercontent.com/s/l19nm54at4crk6i/TableE12%20Queets.csv",
+                                  "https://dl.dropboxusercontent.com/s/bzb1zrb6gosa6e0/TableE13%20Grays%20Harbor.csv",
+                                   
+                                  "https://dl.dropboxusercontent.com/s/7zqmbprtmbk8nxl/Table%20F%20-%20Lower%20Fraser.csv",
+                                  "https://dl.dropboxusercontent.com/s/cei2p1bozt1fxj3/Table%20F%20-%20Interior%20Fraser.csv",
+                                  "https://dl.dropboxusercontent.com/s/aw5h7d76dcodnva/Table%20F%20-%20St%20of%20Geo%20ML.csv",
+                                  "https://dl.dropboxusercontent.com/s/fb3u4v0p48muyky/Table%20F%20-%20St%20of%20Geo%20VI.csv",
+                                  "https://dl.dropboxusercontent.com/s/5f5ux504otvvc2o/Table%20F%20-%20Skagit.csv",
+                                  "https://dl.dropboxusercontent.com/s/w4fyrlcpxf5yx82/Table%20F%20-%20Stillaguamish.csv",
+                                  "https://dl.dropboxusercontent.com/s/x1y7ooxd9hmgeae/Table%20F%20-%20Snohomish.csv",
+                                  "https://dl.dropboxusercontent.com/s/jjwii2dzgx51igp/Table%20F%20-%20Hood%20Canal.csv",
+                                  "https://dl.dropboxusercontent.com/s/qhxhw82xu1zi793/Table%20F%20-%20US%20JDF.csv",
+                                  "https://dl.dropboxusercontent.com/s/wlnjr6lnxdlkg8u/Table%20F%20-%20Quillayute.csv",
+                                  "https://dl.dropboxusercontent.com/s/sbh0hhzzy910asx/Table%20F%20-%20Hoh.csv",
+                                  "https://dl.dropboxusercontent.com/s/41xxblf8bd1mptc/Table%20F%20-%20Queets.csv",
+                                  "https://dl.dropboxusercontent.com/s/bopag2x5lahvo9b/Table%20F%20-%20Grays%20Harbor.csv",
                                   
-                                  "https://dl.dropboxusercontent.com/s/xa24cjc8tj3cy3c/TableE1%20Lower%20Fraser.csv",
-                                  "https://dl.dropboxusercontent.com/s/y324609sm51ck3l/TableE2%20Interior%20Fraser.csv",
-                                  "https://dl.dropboxusercontent.com/s/39vu1uexj7q2x23/TableE3%20Georgia%20Strait%20ML.csv",
-                                  "https://dl.dropboxusercontent.com/s/k3n0icabqyt7c0x/TableE4%20Georgia%20Strait%20VI.csv",
-                                  "https://dl.dropboxusercontent.com/s/azdffjrn23qqwyf/TableE5%20Skagit.csv",
-                                  "https://dl.dropboxusercontent.com/s/r3pwdwf6aol0yei/TableE6%20Stillaguamish.csv",
-                                  "https://dl.dropboxusercontent.com/s/oks451x06msb3m9/TableE7%20Snohomish.csv",
-                                  "https://dl.dropboxusercontent.com/s/viy586snvllk5ep/TableE8%20Hood%20Canal.csv",
-                                  "https://dl.dropboxusercontent.com/s/tzhb6x4irwfl1wv/TableE9%20US%20Strait%20JDF.csv",
-                                  "https://dl.dropboxusercontent.com/s/hj89pnyt9ool026/TableE10%20Quillayute.csv",
-                                  "https://dl.dropboxusercontent.com/s/ldjm30ovei8vw7q/TableE11%20Hoh.csv",
-                                  "https://dl.dropboxusercontent.com/s/oinc0ocu4lc4a5d/TableE12%20Queets.csv",
-                                  "https://dl.dropboxusercontent.com/s/681e4dv68u62nz4/TableE13%20Grays%20Harbor.csv",
-
-                                  "https://dl.dropboxusercontent.com/s/3gup4wp347syq6d/Table%20F%20-%20Lower%20Fraser.csv",
-                                  "https://dl.dropboxusercontent.com/s/77g6vdw95ggqp1w/Table%20F%20-%20Interior%20Fraser.csv",
-                                  "https://dl.dropboxusercontent.com/s/21nczz5t82mf14p/Table%20F%20-%20St%20of%20Geo%20ML.csv",
-                                  "https://dl.dropboxusercontent.com/s/lkgmddt7jc60bok/Table%20F%20-%20St%20of%20Geo%20VI.csv",
-                                  "https://dl.dropboxusercontent.com/s/che8dnucqxjjty2/Table%20F%20-%20Skagit.csv",
-                                  "https://dl.dropboxusercontent.com/s/s1eizqt9k49objd/Table%20F%20-%20Stillaguamish.csv",
-                                  "https://dl.dropboxusercontent.com/s/5mm6b7h3r8gd1nz/Table%20F%20-%20Snohomish.csv",
-                                  "https://dl.dropboxusercontent.com/s/4m40ow5m1dw4svw/Table%20F%20-%20Hood%20Canal.csv",
-                                  "https://dl.dropboxusercontent.com/s/qvetwz7er2d6pgf/Table%20F%20-%20US%20JDF.csv",
-                                  "https://dl.dropboxusercontent.com/s/t8ohzyk0sh37r9e/Table%20F%20-%20Quillayute.csv",
-                                  "https://dl.dropboxusercontent.com/s/c5cgq9cbtrzlecm/Table%20F%20-%20Hoh.csv",
-                                  "https://dl.dropboxusercontent.com/s/8pvivydowzu8ic4/Table%20F%20-%20Queets.csv",
-                                  "https://dl.dropboxusercontent.com/s/xu44i9ot1sss08x/Table%20F%20-%20Grays%20Harbor.csv"),
+                                  "https://dl.dropboxusercontent.com/s/vqtc3szas8kp39z/Table%204.1%20html.txt",
+                                  "https://dl.dropboxusercontent.com/s/h5pkx6d2om48fm1/Table%204.2%20html.txt",
+                                  "https://dl.dropboxusercontent.com/s/rvjhj3qa0bnoizd/Table%206.1%20html.txt",
+                                  "https://dl.dropboxusercontent.com/s/8etihpkdnrxld2e/Table%206.2%20html.txt",
+                                  "https://dl.dropboxusercontent.com/s/7zqmbprtmbk8nxl/s/2lmxq11z5n68ly1/Table%206.3%20html.txt"),
+                 
+                 # The below command is if using Derek's Dropbox.
+                 # attach.files = c("https://dl.dropboxusercontent.com/s/jti9io6bufr0k4j/Figure%204.1.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/2twmtoi8m1sur4r/Figure%204.2.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/9t2ozw5ir86covl/Figure%204.3.jpg", 
+                 #                  "https://dl.dropboxusercontent.com/s/3cmw8yda3677ls5/Table%204.1%20html.txt",
+                 #                  "https://dl.dropboxusercontent.com/s/cih9ma0vtly8a72/Table%204.2%20html.txt",
+                 #                  "https://dl.dropboxusercontent.com/s/4g48qbf6kstpb6d/Figure%205.1.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/38bwwvqhavtgw5p/Table%206.1%20html.txt",
+                 #                  "https://dl.dropboxusercontent.com/s/42hz2sen7szcfps/Table%206.2%20html.txt",
+                 #                  "https://dl.dropboxusercontent.com/s/4n3k8gatiskppa2/Table%206.3%20html.txt",
+                 #                  "https://dl.dropboxusercontent.com/s/kuhyt00y4kr2ivf/Fig71.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/kqz9jx32h6aiek0/Fig72.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/tuya8vhn9ayrg1f/Fig73.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/nvx6tjaqat1wc8n/Fig74.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/3uk4kktxlt9kdtp/Fig75.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/dnal6uhxcyughbe/Fig76.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/bst9kdx5pnya8zi/Fig77.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/8vvmquab1z6o7od/Fig78.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/izk583dv0v39vi9/Fig79.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/rwvdcqwk410mrrv/Fig710.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/tri09bacabye2kq/Fig711.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/p8t646v5rwnqaga/Fig712.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/f0l65a9pit6fi0d/Fig713.jpg",
+                 #                  "https://dl.dropboxusercontent.com/s/a2mtb0dh15njfl3/Table%209.csv",
+                 #                  
+                 #                  "https://dl.dropboxusercontent.com/s/xa24cjc8tj3cy3c/TableE1%20Lower%20Fraser.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/y324609sm51ck3l/TableE2%20Interior%20Fraser.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/39vu1uexj7q2x23/TableE3%20Georgia%20Strait%20ML.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/k3n0icabqyt7c0x/TableE4%20Georgia%20Strait%20VI.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/azdffjrn23qqwyf/TableE5%20Skagit.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/r3pwdwf6aol0yei/TableE6%20Stillaguamish.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/oks451x06msb3m9/TableE7%20Snohomish.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/viy586snvllk5ep/TableE8%20Hood%20Canal.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/tzhb6x4irwfl1wv/TableE9%20US%20Strait%20JDF.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/hj89pnyt9ool026/TableE10%20Quillayute.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/ldjm30ovei8vw7q/TableE11%20Hoh.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/oinc0ocu4lc4a5d/TableE12%20Queets.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/681e4dv68u62nz4/TableE13%20Grays%20Harbor.csv",
+                 # 
+                 #                  "https://dl.dropboxusercontent.com/s/3gup4wp347syq6d/Table%20F%20-%20Lower%20Fraser.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/77g6vdw95ggqp1w/Table%20F%20-%20Interior%20Fraser.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/21nczz5t82mf14p/Table%20F%20-%20St%20of%20Geo%20ML.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/lkgmddt7jc60bok/Table%20F%20-%20St%20of%20Geo%20VI.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/che8dnucqxjjty2/Table%20F%20-%20Skagit.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/s1eizqt9k49objd/Table%20F%20-%20Stillaguamish.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/5mm6b7h3r8gd1nz/Table%20F%20-%20Snohomish.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/4m40ow5m1dw4svw/Table%20F%20-%20Hood%20Canal.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/qvetwz7er2d6pgf/Table%20F%20-%20US%20JDF.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/t8ohzyk0sh37r9e/Table%20F%20-%20Quillayute.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/c5cgq9cbtrzlecm/Table%20F%20-%20Hoh.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/8pvivydowzu8ic4/Table%20F%20-%20Queets.csv",
+                 #                  "https://dl.dropboxusercontent.com/s/xu44i9ot1sss08x/Table%20F%20-%20Grays%20Harbor.csv"),
                  file.descriptions = c("Figure 4.1", "Figure 4.2", "Figure 4.3", "Table 4.1","Table 4.2", "Figure 5.1", "Table 6.1","Table 6.2",
                                        "Table 6.3","Figure 7.1","Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5", "Figure 7.6", "Figure 7.7", "Figure 7.8",
                                        "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13", "Table 9",
@@ -179,10 +243,12 @@ function(input, output, session){
                                        "Table E - St of Geo VI", "Table E - Skagit", "Table E - Stillaguamish",
                                        "Table E - Snohomish", "Table E - Hood Canal", "Table E - US JDF",
                                        "Table E - Quillayute", "Table E - Hoh", "Table E - Queets", "Table E - Grays Harbor",
-                                       "Table F - Lower Fraser", "Table F - Interior Fraser", "Table F - St of Geo ML", 
+                                       "Table F - Lower Fraser", "Table F - Interior Fraser", "Table F - St of Geo ML",
                                        "Table F - St of Geo VI", "Table F - Skagit", "Table F - Stillaguamish",
                                        "Table F - Snohomish", "Table F - Hood Canal", "Table F - US JDF",
-                                       "Table F - Quillayute", "Table F - Hoh", "Table F - Queets", "Table F - Grays Harbor"), # optional parameter
+                                       "Table F - Quillayute", "Table F - Hoh", "Table F - Queets", "Table F - Grays Harbor",
+                                       "Table 4.1 as HTML", "Table 4.2 as HTML", "Table 6.1 as HTML",
+                                       "Table 6.2 as HTML", "Table 6.3 as HTML"), # optional parameter
                  debug = TRUE)
        })
      })
@@ -198,7 +264,9 @@ function(input, output, session){
           
           incProgress(1/2, detail = "Loading Post-Season Data - this may take a few minutes")
           
-          RunIDTab = read.csv("https://dl.dropboxusercontent.com/s/ntgampj1d8dyp26/RunList.csv?dl=1")
+          RunIDTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/RunList.csv",sep=",",dtoken=token)
+          #Alternate download method.
+          #RunIDTab = read.csv("https://dl.dropboxusercontent.com/s/ntgampj1d8dyp26/RunList.csv?dl=1")
        
           #removes useless columns in the data
           Drops <- c("PrimaryKey", "SpeciesName", "RunTitle",
@@ -210,7 +278,9 @@ function(input, output, session){
           
           #Grabs FRAM Escapement Table
           
-          EscTab = read.csv("https://dl.dropboxusercontent.com/s/y5f8kx4v4pxnnrh/Escapement.csv?dl=1")
+          EscTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/Escapement.csv",sep=",",dtoken=token)
+          #Alternate download method
+          #EscTab = read.csv("https://dl.dropboxusercontent.com/s/y5f8kx4v4pxnnrh/Escapement.csv?dl=1")
        
           #Adds run info to EscTab
           EscTab <- merge(EscTab, RunIDTab, by= "RunID")
@@ -225,8 +295,9 @@ function(input, output, session){
           EscTab$BasePeriodID <- as.character(EscTab$BasePeriodID)
        
           #Grab FRAM Mortality Table
-        
-          MortTab = read.csv("https://dl.dropboxusercontent.com/s/w0qv3o4bqro7o31/Mortality.csv?dl=1")
+          MortTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/Mortality.csv",sep=",",dtoken=token)
+          #Alternate download method
+          #MortTab = read.csv("https://dl.dropboxusercontent.com/s/w0qv3o4bqro7o31/Mortality.csv?dl=1")
        
           #Get summarized Mortalities
           MortTab$TotMort <- MortTab$LandedCatch + MortTab$NonRetention + MortTab$Shaker + MortTab$DropOff + MortTab$MSFLandedCatch + MortTab$MSFNonRetention + MortTab$MSFShaker + MortTab$MSFDropOff
@@ -267,9 +338,14 @@ function(input, output, session){
           ################Pre-season data loading
           #Load Pre-season RunID, Escapement and Mortality Tables
           
-          PreRunIDTab = read.csv("https://dl.dropboxusercontent.com/s/fnfnwv1ihg3xi3i/PreSeasonRunList.csv?dl=1")
-          PreEscTab = read.csv("https://dl.dropboxusercontent.com/s/womabybbgs11lb9/PreSeasonEscapement.csv?dl=1")
-          PreMortTab = read.csv("https://dl.dropboxusercontent.com/s/ruyewmxz8l1a7jj/PreSeasonMortality.csv?dl=1")
+          PreRunIDTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/PreSeasonRunList.csv",sep=",",dtoken=token)
+          PreEscTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/PreSeasonEscapement.csv",sep=",",dtoken=token)
+          PreMortTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/PreSeasonMortality.csv",sep=",",dtoken=token)
+          
+          #The below represents an alternate method of downloading files
+          #PreRunIDTab = read.csv("https://dl.dropboxusercontent.com/s/fnfnwv1ihg3xi3i/PreSeasonRunList.csv?dl=1")
+          #PreEscTab = read.csv("https://dl.dropboxusercontent.com/s/womabybbgs11lb9/PreSeasonEscapement.csv?dl=1")
+          #PreMortTab = read.csv("https://dl.dropboxusercontent.com/s/ruyewmxz8l1a7jj/PreSeasonMortality.csv?dl=1")
           
           #removes useless columns in the data
           Drops <- c("PrimaryKey", "SpeciesName", "RunTitle",
@@ -338,7 +414,7 @@ function(input, output, session){
               #Only include pre-season iterations if a TAMM is available in the TAMMList file, if blank do nothing.
               if (is.na(TAMMRow$PreTAMM[1]) == FALSE){
                 filePath <- file.path(tempdir(), "Pre_TAMM.xlsm")
-                drop_download(paste("Input Files/TAMMs/", TAMMRow$PreTAMM[1], sep = ""), local_path = filePath, overwrite = TRUE, dtoken = token)
+                drop_download(paste("Output/Preseason/TAMMs/TAMMFiles_4ModelRuns/", TAMMRow$PreTAMM[1], sep = ""), local_path = filePath, overwrite = TRUE, dtoken = token)
                 PreTAMMDF <<- read_xlsx(filePath, sheet = '2')
               
                 for (j in 1:length(CoastalStockList)){
@@ -380,7 +456,7 @@ function(input, output, session){
                 #Queets - Postseason
               
                 filePath <- file.path(tempdir(), "Post_TAMM.xlsm")
-                drop_download(paste("Input Files/TAMMs/", TAMMRow$PostTAMM[1], sep = ""), local_path = filePath, overwrite = TRUE, dtoken = token)
+                drop_download(paste("Output/Postseason/TAMMs/", TAMMRow$PostTAMM[1], sep = ""), local_path = filePath, overwrite = TRUE, dtoken = token)
                 PostTAMMDF <<- read_xlsx(filePath, sheet = '2')
               
                 for (j in 1:length(CoastalStockList)){
@@ -747,7 +823,7 @@ function(input, output, session){
               filePath <- file.path(tempdir(), FigName)
               ggsave(Fig41, file = filePath, width = 12, height = 6)
            
-              drop_upload(filePath)
+              drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Figures/")
            
             }
             if (i == 2){
@@ -789,7 +865,7 @@ function(input, output, session){
               filePath <- file.path(tempdir(), FigName)
               ggsave(Fig42, file = filePath, width = 12, height = 6)
            
-              drop_upload(filePath)
+              drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Figures/")
             }
             if (i == 3){
               FigStocks <- c("Quillayute", "Hoh", "Queets", "Grays Harbor")
@@ -830,7 +906,7 @@ function(input, output, session){
               filePath <- file.path(tempdir(), FigName)
               ggsave(Fig43, file = filePath, width = 12, height = 6)
            
-              drop_upload(filePath)
+              drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Figures/")
             }
           }
           
@@ -870,7 +946,7 @@ function(input, output, session){
           filePath <- file.path(tempdir(), "Figure 5.1.jpg")
           ggsave(Fig51, file = filePath, width = 12, height = 6)
 
-          drop_upload(filePath)
+          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Figures/")
           
          
           incProgress(4/5, detail = "Preparing figures 7.1 to 7.13")
@@ -972,7 +1048,7 @@ function(input, output, session){
                        geom_line(aes(y = Escapement/maxy), group = 1, size = 1.2), file = filePath, width = 12, height = 6)
 
               
-              drop_upload(filePath)
+              drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Figures/")
             })
           }
           
@@ -1049,12 +1125,12 @@ function(input, output, session){
           filePath <- file.path(tempdir(), "Table 4.1 html.txt")
           writeLines(Tab41DFhtml,filePath)
           
-          drop_upload(filePath)
+          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
           
           filePath <- file.path(tempdir(), "Table 4.2 html.txt")
           writeLines(Tab42DFhtml,filePath)
           
-          drop_upload(filePath)
+          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
           
           
           #Get Run Info into CSVs
@@ -1076,6 +1152,8 @@ function(input, output, session){
           filePath <- file.path(tempdir(), "Table 4.1.csv")
           write.csv(rbind(Tab41DF,TabRunInfo),filePath)
           
+          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
+          
           TabRunInfo <- RunInfo
           
           #This adds in empty columns - the DFs being combined need to have the same number of columns
@@ -1093,7 +1171,7 @@ function(input, output, session){
           filePath <- file.path(tempdir(), "Table 4.2.csv")
           write.csv(rbind(Tab42DF,TabRunInfo),filePath)
           
-          drop_upload(filePath)
+          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
           
           
           
@@ -1215,9 +1293,9 @@ function(input, output, session){
           filePath3 <- file.path(tempdir(), "Table 6.3 html.txt")
           writeLines(Tab63DFhtml,filePath3)
 
-          drop_upload(filePath)
-          drop_upload(filePath2)
-          drop_upload(filePath3)
+          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
+          drop_upload(filePath2, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
+          drop_upload(filePath3, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
           
           #Now do these tables as CSVs
           
@@ -1238,7 +1316,7 @@ function(input, output, session){
           filePath <- file.path(tempdir(), "Table 6.1.csv")
           write.csv(rbind(Tab61DF,TabRunInfo),filePath)
           
-          drop_upload(filePath)
+          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
           
           TabRunInfo <- RunInfo
           
@@ -1257,7 +1335,7 @@ function(input, output, session){
           filePath <- file.path(tempdir(), "Table 6.2.csv")
           write.csv(rbind(Tab62DF,TabRunInfo),filePath)
           
-          drop_upload(filePath)
+          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
           
           TabRunInfo <- RunInfo
           
@@ -1276,7 +1354,7 @@ function(input, output, session){
           filePath <- file.path(tempdir(), "Table 6.3.csv")
           write.csv(rbind(Tab63DF,TabRunInfo),filePath)
           
-          drop_upload(filePath)
+          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
           
           
           
@@ -1368,7 +1446,7 @@ function(input, output, session){
           filePath <- file.path(tempdir(), "Table 9.csv")
           write.csv(rbind(Tab9,TabRunInfo),filePath)
           
-          drop_upload(filePath)
+          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
           
           
           #Appendix E
@@ -1422,7 +1500,7 @@ function(input, output, session){
               
               filePath <- file.path(tempdir(), paste(Tabname," ",StockList[i],".csv",sep=""))
               write.csv(rbind(TabEDF,TabRunInfo),filePath)
-              drop_upload(filePath)
+              drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
               
             })
           }
@@ -1603,91 +1681,91 @@ function(input, output, session){
             filePath <- file.path(tempdir(), "Table F - Lower Fraser.csv")
             write.csv(TableF10,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF10 <<- TableF10
 
             filePath <- file.path(tempdir(), "Table F - Interior Fraser.csv")
             write.csv(TableF11,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF11 <<- TableF11
 
             filePath <- file.path(tempdir(), "Table F - St of Geo ML.csv")
             write.csv(TableF12,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF12 <<- TableF12
 
             filePath <- file.path(tempdir(), "Table F - St of Geo VI.csv")
             write.csv(TableF13,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF13 <<- TableF13
 
             filePath <- file.path(tempdir(), "Table F - Skagit.csv")
             write.csv(TableF1,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF1 <<- TableF1
 
             filePath <- file.path(tempdir(), "Table F - Stillaguamish.csv")
             write.csv(TableF2,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF2 <<- TableF2
 
             filePath <- file.path(tempdir(), "Table F - Snohomish.csv")
             write.csv(TableF3,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF3 <<- TableF3
 
             filePath <- file.path(tempdir(), "Table F - Hood Canal.csv")
             write.csv(TableF4,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF4 <<- TableF4
 
             filePath <- file.path(tempdir(), "Table F - US JDF.csv")
             write.csv(TableF5,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF5 <<- TableF5
 
             filePath <- file.path(tempdir(), "Table F - Quillayute.csv")
             write.csv(TableF6,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF6 <<- TableF6
 
             filePath <- file.path(tempdir(), "Table F - Hoh.csv")
             write.csv(TableF7,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF7 <<- TableF7
 
             filePath <- file.path(tempdir(), "Table F - Queets.csv")
             write.csv(TableF8,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF8 <<- TableF8
 
             filePath <- file.path(tempdir(), "Table F - Grays Harbor.csv")
             write.csv(TableF9,filePath)
 
-            drop_upload(filePath)
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
 
             TableF9 <<- TableF9
             
@@ -1896,8 +1974,7 @@ function(input, output, session){
       TableF8
     }
     else if (input$table == "Table F - Grays Harbor"){
-      #TableF9
-      RunInfo
+      TableF9
     }
   }) 
 }
