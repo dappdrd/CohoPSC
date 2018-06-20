@@ -21,6 +21,7 @@ library(kableExtra)
 library(later)
 library(pool)
 #library(rsconnect)
+library(readxl)
 
 #options(rsconnect.max.bundle.size=3145728000)
 #options(shiny.maxRequestSize=3145728000)
@@ -28,7 +29,7 @@ library(pool)
 #configureApp("cotc_tool", size="3X-Large", account = "salmonid")
 #options(java.parameters = "-Xss2560k")
 
-token <- readRDS("droptoken.rds")
+token <- readRDS("droptoken_PSC_CoTC_Dropbox.rds")
 drop_acc(dtoken = token)
 
 shinyServer(
@@ -44,6 +45,7 @@ shinyServer(
     sidebarPanel(
       
       textInput("PasswordAdd", "Please enter password to access program functions", ""),
+      selectInput("TAMMAdd", "Use TAMM to update coastal stocks/catch?", choice = c("Yes - All Stocks", "Yes - Queets Only", "No")),
       #Adds a dropdown box
       actionButton("DataProcessButton",label = "Process Data/Create Figures & Tables"),
       actionButton("FTableButton",label = "Produce Appendix F Tables"),
