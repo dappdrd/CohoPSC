@@ -30,6 +30,8 @@ library(kableExtra)
 library(later)
 library(pool)
 #library(rsconnect)
+#For reading TAMMs (coastal iterations)
+library(readxl)
 
 #options(rsconnect.max.bundle.size=3145728000)
 #options(shiny.maxRequestSize=3145728000)
@@ -81,7 +83,8 @@ HohTermRow <- data.frame(Stock = "Hoh", TerminalFish = c(73,74,75), TAMMPosition
 GHTermRow <- data.frame(Stock = "Grays Harbor", TerminalFish = c(48, 49, 50, 51, 53, 52, 54, 55, 56, 57, 58, 59, 60, 61), TAMMPosition = 37)
 CoastalTermFishDF <<- rbind(QueetsTermRow, QuillayuteTermRow, HohTermRow, GHTermRow)
 
-TAMMList <<- read.csv("https://dl.dropboxusercontent.com/s/jbclcmqk0xqfnob/TAMMList.csv?dl=1")
+TAMMList<<-drop_read_csv("Input Files/TAMMList.csv",sep=",",dtoken=token)
+#TAMMList <<- read.csv("https://dl.dropboxusercontent.com/s/jbclcmqk0xqfnob/TAMMList.csv?dl=1")
 
 #List of Stocks
 StockList <<- as.character(unique(StockDF$StockName))
@@ -243,10 +246,6 @@ function(input, output, session){
           MortTab$TimeStep <- as.character(MortTab$TimeStep)
           MortTab$BasePeriodID <- as.character(MortTab$BasePeriodID)
           MortTab$FisheryID <- as.character(MortTab$FisheryID)
-          
-          #make them global variables for use in the F Tables
-          MortTab <<- MortTab
-          EscTab <<- EscTab
        
           #This is the Esc DF to which all ESC data is saved
           MainEscDF <- data.frame(RunYear = as.character(), Escapement= as.double(), Stock = as.character())
@@ -317,8 +316,111 @@ function(input, output, session){
           #This is the Mort DF to which all mort data is saved
           PreMainMortDF <- data.frame(RunYear = as.character(), TotMort= as.double(), Stock = as.character())
           
+          #This is a list of stocks to perform coastal iterations on
+          if(input$TAMMAdd == "Yes - All Stocks"){
+            CoastalStockList <- c("Queets", "Quillayute", "Hoh", "Grays Harbor")
+          }
+          if(input$TAMMAdd == "Yes - Queets Only"){
+            CoastalStockList <- c("Queets")
+          }
           
+          ######## This section corrects Coastal Stocks, but only if prompted by the user
+          ######## Post-season and pre-season are done separately.
+          ######## This is because there may be a pre-season TAMM but no post-season TAMM.
+          if(input$TAMMAdd == "Yes - All Stocks" | input$TAMMAdd == "Yes - Queets Only"){
+            
+            availableTAMMyears <- unique(subset(TAMMList, year %in% YearList)$year)
+            
+            for(i in 1:length(availableTAMMyears)){
+            
+              TAMMRow <- subset(TAMMList, year == availableTAMMyears[i])
+            
+              #Only include pre-season iterations if a TAMM is available in the TAMMList file, if blank do nothing.
+              if (is.na(TAMMRow$PreTAMM[1]) == FALSE){
+                filePath <- file.path(tempdir(), "Pre_TAMM.xlsm")
+                drop_download(paste("Input Files/TAMMs/", TAMMRow$PreTAMM[1], sep = ""), local_path = filePath, overwrite = TRUE, dtoken = token)
+                PreTAMMDF <<- read_xlsx(filePath, sheet = '2')
+              
+                for (j in 1:length(CoastalStockList)){
+                  #This subsets data frames to get the list of terminal fisheries and FRAMIDs for the stock
+                  TerminalFisheriesList <- unique(subset(CoastalTermFishDF, Stock == CoastalStockList[j])$TerminalFish)
+                  CoastalFRAMStks <- unique(subset(StockDF, StockName == CoastalStockList[j])$FRAMWildStocks)
+                
+                  #This gets the column number for the stock in table 2 of TAMM
+                  TAMMLocation <- subset(CoastalTermFishDF, Stock == CoastalStockList[j])$TAMMPosition[1]
+                
+                  #This changes the total mortality of any terminal fisheries for a given stock to 0
+                  PreMortTab$TotMort[PreMortTab$StockID %in% CoastalFRAMStks & PreMortTab$FisheryID %in% TerminalFisheriesList & PreMortTab$RunYear == TAMMRow$year[1]] <- 0
+                
+                  #This changes the escapement a given stock to 0
+                  PreEscTab$Escapement[PreEscTab$StockID %in% CoastalFRAMStks & PreEscTab$RunYear == TAMMRow$year[1]] <- 0
+                
+                  #Finds the location in PreMortTab of the terminal fisheries rows for a given stock
+                  TermFishLocations <- which(PreMortTab$StockID %in% CoastalFRAMStks & PreMortTab$FisheryID %in% TerminalFisheriesList & PreMortTab$RunYear == TAMMRow$year[1])
+                
+                  #Lumps together FW Sport and Net catches into the first row that has a terminal fishery
+                  #FW net and sport are combined in table 3 so no need to differentiate between the two
+                  PreMortTab$TotMort[TermFishLocations[1]] <- as.numeric(PreTAMMDF[37,TAMMLocation]) + as.numeric(PreTAMMDF[38,TAMMLocation])
+                
+                  #For Gray's Harbor, there is also FW Net
+                  if(CoastalStockList[i] == "Grays Harbor"){
+                    PreMortTab$TotMort[TermFishLocations[1]] <- PreMortTab$TotMort[TermFishLocations[1]] + as.numeric(PreTAMMDF[36,TAMMLocation])
+                  }
+                
+                  #Finds the location in PreEscTab of the given stock
+                  EscLocations <- which(PreEscTab$StockID %in% CoastalFRAMStks & PreEscTab$RunYear == TAMMRow$year[1])
+                
+                  #Adds in Escapement, like the above, it just sticks it into the first slot if there are multiple stocks
+                  PreEscTab$Escapement[EscLocations[1]] <- as.numeric(PreTAMMDF[47,TAMMLocation])
+                }
+              }
+            
+              #Only include post-season iterations if a TAMM is available in the TAMMList file, if blank do nothing.
+              if (is.na(TAMMRow$PostTAMM[1]) == FALSE){
+                #Queets - Postseason
+              
+                filePath <- file.path(tempdir(), "Post_TAMM.xlsm")
+                drop_download(paste("Input Files/TAMMs/", TAMMRow$PostTAMM[1], sep = ""), local_path = filePath, overwrite = TRUE, dtoken = token)
+                PostTAMMDF <<- read_xlsx(filePath, sheet = '2')
+              
+                for (j in 1:length(CoastalStockList)){
+                  #This subsets data frames to get the list of terminal fisheries and FRAMIDs for the stock
+                  TerminalFisheriesList <- unique(subset(CoastalTermFishDF, Stock == CoastalStockList[j])$TerminalFish)
+                  CoastalFRAMStks <- unique(subset(StockDF, StockName == CoastalStockList[j])$FRAMWildStocks)
+              
+                  #This gets the column number for the stock in table 2 of TAMM
+                  TAMMLocation <- subset(CoastalTermFishDF, Stock == CoastalStockList[j])$TAMMPosition[1]
+               
+                  #This changes the total mortality of any terminal fisheries for a given stock to 0
+                  MortTab$TotMort[MortTab$StockID %in% CoastalFRAMStks & MortTab$FisheryID %in% TerminalFisheriesList & MortTab$RunYear == TAMMRow$year[1]] <- 0
+              
+                  #This changes the escapement a given stock to 0
+                  EscTab$Escapement[EscTab$StockID %in% CoastalFRAMStks & EscTab$RunYear == TAMMRow$year[1]] <- 0
+              
+                  #Finds the location in PostMortTab of the terminal fisheries rows for a given stock
+                  TermFishLocations <- which(MortTab$StockID %in% CoastalFRAMStks & MortTab$FisheryID %in% TerminalFisheriesList & MortTab$RunYear == TAMMRow$year[1])
+              
+                  #Lumps together FW Sport and Net catches into the first row that has a terminal fishery
+                  #FW net and sport are combined in table 3 so no need to differentiate between the two
+                  MortTab$TotMort[TermFishLocations[1]] <- as.numeric(PostTAMMDF[37,TAMMLocation]) + as.numeric(PostTAMMDF[38,TAMMLocation])
+
+                  if(CoastalStockList[i] == "Grays Harbor"){
+                    MortTab$TotMort[TermFishLocations[1]] <- MortTab$TotMort[TermFishLocations[1]] + as.numeric(PostTAMMDF[36,TAMMLocation])
+                  }
+              
+                  #Finds the location in PostEscTab of the given stock
+                  EscLocations <- which(EscTab$StockID %in% CoastalFRAMStks & EscTab$RunYear == TAMMRow$year[1])
+               
+                  #Adds in Escapement, like the above, it just sticks it into the first slot if there are multiple stocks
+                  EscTab$Escapement[EscLocations[1]] <- as.numeric(PostTAMMDF[47,TAMMLocation])
+               }
+              }
+            }
+          }
           
+          #make them global variables for use in the F Tables
+          MortTab <<- MortTab
+          EscTab <<- EscTab  
           
           
        })
@@ -875,6 +977,41 @@ function(input, output, session){
           }
           
           
+          #This section sets up run information for the user
+          #It includes a run date and time
+          #information on who ran it (if an email is supplied)
+          #and information on if a TAMM was used.
+          if(as.integer(substr(as.character(Sys.time()),12,13)) > 6){
+            #Minus 7 hours
+            NewHour <- as.integer(substr(as.character(Sys.time()),12,13))-7
+            #But wait Derek, what if New Hour is only 1 digit?
+            if(NewHour < 10){
+              NewHour <- paste("0",as.character(NewHour), sep = "")
+            }
+            #Stitch it all back together
+            RunTime <- paste(substr(as.character(Sys.time()),1,11), NewHour, substr(as.character(Sys.time()),14,19), sep = "")
+          }
+          #If day must be adjusted
+          if(as.integer(substr(as.character(Sys.time()),12,13)) < 7){
+            NewHour <- as.integer(substr(as.character(Sys.time()),12,13))-7+24
+            NewDay <- as.integer(substr(as.character(Sys.time()),9,10))-1
+            if(NewDay < 10){
+              NewDay <- paste("0",as.character(NewDay), sep = "")
+            }
+            #Stitch it all back together
+            RunTime <- paste(substr(as.character(Sys.time()),1,8), NewDay, " ", NewHour, substr(as.character(Sys.time()),14,19), sep = "")
+          }
+          
+          if(input$EmailAdd == ""){
+            RunBy <- "User did not specify email address prior to running"
+          }
+          else{
+            RunBy <- input$EmailAdd
+          }
+          
+          RunInfo <<- data.frame(runname = c("",paste("Run Time: ", RunTime, sep = ""), paste("Run By: ", RunBy, sep = ""), paste("TAMM option: ", input$TAMMAdd, sep = "")))
+          
+          
           incProgress(5/5, detail = "Tables")
           #tables
           #Options added - can be changed to Latex but not PDF
@@ -908,7 +1045,7 @@ function(input, output, session){
             #add header rows
             add_header_above(c(" ", " ", "Abundance Category Breakpoints" = 2), bold = T)
           
-          #upload tables 4.1, 4.2
+          #upload tables 4.1, 4.2 as HTML
           filePath <- file.path(tempdir(), "Table 4.1 html.txt")
           writeLines(Tab41DFhtml,filePath)
           
@@ -920,7 +1057,43 @@ function(input, output, session){
           drop_upload(filePath)
           
           
+          #Get Run Info into CSVs
+          TabRunInfo <- RunInfo
           
+          #This adds in empty columns - the DFs being combined need to have the same number of columns
+          # It adds in 4 blank rows.
+          for (y in 2:ncol(Tab41DF)){
+            EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
+            TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
+          }
+          
+          #This makes the column names match up so that we can combine DFs
+          for (y in 1:ncol(Tab41DF)){
+            names(TabRunInfo)[y] <- colnames (Tab41DF)[y]
+          }
+          
+          #upload tables 4.1 as csv, include RunInfo table
+          filePath <- file.path(tempdir(), "Table 4.1.csv")
+          write.csv(rbind(Tab41DF,TabRunInfo),filePath)
+          
+          TabRunInfo <- RunInfo
+          
+          #This adds in empty columns - the DFs being combined need to have the same number of columns
+          # It adds in 4 blank rows.
+          for (y in 2:ncol(Tab42DF)){
+            EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
+            TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
+          }
+          
+          #This makes the column names match up so that we can combine DFs
+          for (y in 1:ncol(Tab42DF)){
+            names(TabRunInfo)[y] <- colnames (Tab42DF)[y]
+          }
+          
+          filePath <- file.path(tempdir(), "Table 4.2.csv")
+          write.csv(rbind(Tab42DF,TabRunInfo),filePath)
+          
+          drop_upload(filePath)
           
           
           
@@ -1046,10 +1219,64 @@ function(input, output, session){
           drop_upload(filePath2)
           drop_upload(filePath3)
           
+          #Now do these tables as CSVs
           
+          TabRunInfo <- RunInfo
           
+          #This adds in empty columns - the DFs being combined need to have the same number of columns
+          # It adds in 4 blank rows.
+          for (y in 2:ncol(Tab61DF)){
+            EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
+            TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
+          }
           
+          #This makes the column names match up so that we can combine DFs
+          for (y in 1:ncol(Tab61DF)){
+            names(TabRunInfo)[y] <- colnames (Tab61DF)[y]
+          }
           
+          filePath <- file.path(tempdir(), "Table 6.1.csv")
+          write.csv(rbind(Tab61DF,TabRunInfo),filePath)
+          
+          drop_upload(filePath)
+          
+          TabRunInfo <- RunInfo
+          
+          #This adds in empty columns - the DFs being combined need to have the same number of columns
+          # It adds in 4 blank rows.
+          for (y in 2:ncol(Tab62DF)){
+            EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
+            TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
+          }
+          
+          #This makes the column names match up so that we can combine DFs
+          for (y in 1:ncol(Tab62DF)){
+            names(TabRunInfo)[y] <- colnames (Tab62DF)[y]
+          }
+          
+          filePath <- file.path(tempdir(), "Table 6.2.csv")
+          write.csv(rbind(Tab62DF,TabRunInfo),filePath)
+          
+          drop_upload(filePath)
+          
+          TabRunInfo <- RunInfo
+          
+          #This adds in empty columns - the DFs being combined need to have the same number of columns
+          # It adds in 4 blank rows.
+          for (y in 2:ncol(Tab63DF)){
+            EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
+            TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
+          }
+          
+          #This makes the column names match up so that we can combine DFs
+          for (y in 1:ncol(Tab63DF)){
+            names(TabRunInfo)[y] <- colnames (Tab63DF)[y]
+          }
+          
+          filePath <- file.path(tempdir(), "Table 6.3.csv")
+          write.csv(rbind(Tab63DF,TabRunInfo),filePath)
+          
+          drop_upload(filePath)
           
           
           
@@ -1123,10 +1350,26 @@ function(input, output, session){
           
           Tab9 <<- Tab9
           
+          
+          TabRunInfo <- RunInfo
+          
+          #This adds in empty columns - the DFs being combined need to have the same number of columns
+          # It adds in 4 blank rows.
+          for (y in 2:ncol(Tab9)){
+            EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
+            TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
+          }
+          
+          #This makes the column names match up so that we can combine DFs
+          for (y in 1:ncol(Tab9)){
+            names(TabRunInfo)[y] <- colnames (Tab9)[y]
+          }
+          
           filePath <- file.path(tempdir(), "Table 9.csv")
-          write.csv(Tab9,filePath)
+          write.csv(rbind(Tab9,TabRunInfo),filePath)
           
           drop_upload(filePath)
+          
           
           #Appendix E
           
@@ -1162,8 +1405,23 @@ function(input, output, session){
               #create variable name for later use
               assign(Tabname, TabEDF, envir = .GlobalEnv, pos = 1)
               
+              TabRunInfo <- RunInfo
+              
+              #This adds in empty columns - the DFs being combined need to have the same number of columns
+              # It adds in 4 blank rows.
+              for (y in 2:ncol(TabEDF)){
+                EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
+                TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
+              }
+              
+              #This makes the column names match up so that we can combine DFs
+              for (y in 1:ncol(TabEDF)){
+                names(TabRunInfo)[y] <- colnames (TabEDF)[y]
+              }
+              
+              
               filePath <- file.path(tempdir(), paste(Tabname," ",StockList[i],".csv",sep=""))
-              write.csv(TabEDF,filePath)
+              write.csv(rbind(TabEDF,TabRunInfo),filePath)
               drop_upload(filePath)
               
             })
@@ -1195,7 +1453,7 @@ function(input, output, session){
             BCGSSptRow <- data.frame(Fishery = "BC GeoStr Spt & Trl", FRAMFish = c(176,191,192))
             BCGSNetRow <- data.frame(Fishery = "BC GeoStr Net", FRAMFish = c(183))
             BCJDFSptRow <- data.frame(Fishery = "BC JDF Sport", FRAMFish = c(189))
-            BCJDFNetRow <- data.frame(Fishery = "BC JDF Net & Troll", FRAMFish = c(178, 179))
+            BCJDFNetRow <- data.frame(Fishery = "BC JDF Net & Troll", FRAMFish = c(185, 177))
             BCFraserRow <- data.frame(Fishery = "BC Fraser Net & Spt", FRAMFish = c(169, 184, 167, 168))
             
             SEAKRow <- data.frame(Fishery = "SEAK All", FRAMFish = c(194, 195, 196, 197, 198))
@@ -1638,7 +1896,8 @@ function(input, output, session){
       TableF8
     }
     else if (input$table == "Table F - Grays Harbor"){
-      TableF9
+      #TableF9
+      RunInfo
     }
   }) 
 }
