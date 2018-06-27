@@ -83,7 +83,7 @@ HohTermRow <- data.frame(Stock = "Hoh", TerminalFish = c(73,74,75), TAMMPosition
 GHTermRow <- data.frame(Stock = "Grays Harbor", TerminalFish = c(48, 49, 50, 51, 53, 52, 54, 55, 56, 57, 58, 59, 60, 61), TAMMPosition = 37)
 CoastalTermFishDF <<- rbind(QueetsTermRow, QuillayuteTermRow, HohTermRow, GHTermRow)
 
-TAMMList<<-drop_read_csv("InputTemplates/Periodic and Annual Report Tool/TAMMList.csv",sep=",",dtoken=token)
+TAMMList<<-drop_read_csv("Input/Annual and Periodic Report Tool/TAMMList.csv",sep=",",dtoken=token)
 
 #Alternative way of reading in CSVs.
 #The above way is preferred because it downloads based upon the name of the file.
@@ -264,7 +264,7 @@ function(input, output, session){
           
           incProgress(1/2, detail = "Loading Post-Season Data - this may take a few minutes")
           
-          RunIDTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/RunList.csv",sep=",",dtoken=token)
+          RunIDTab = drop_read_csv("Input/Annual and Periodic Report Tool/RunList.csv",sep=",",dtoken=token)
           #Alternate download method.
           #RunIDTab = read.csv("https://dl.dropboxusercontent.com/s/ntgampj1d8dyp26/RunList.csv?dl=1")
        
@@ -278,7 +278,7 @@ function(input, output, session){
           
           #Grabs FRAM Escapement Table
           
-          EscTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/Escapement.csv",sep=",",dtoken=token)
+          EscTab = drop_read_csv("Input/Annual and Periodic Report Tool/Escapement.csv",sep=",",dtoken=token)
           #Alternate download method
           #EscTab = read.csv("https://dl.dropboxusercontent.com/s/y5f8kx4v4pxnnrh/Escapement.csv?dl=1")
        
@@ -295,7 +295,7 @@ function(input, output, session){
           EscTab$BasePeriodID <- as.character(EscTab$BasePeriodID)
        
           #Grab FRAM Mortality Table
-          MortTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/Mortality.csv",sep=",",dtoken=token)
+          MortTab = drop_read_csv("Input/Annual and Periodic Report Tool/Mortality.csv",sep=",",dtoken=token)
           #Alternate download method
           #MortTab = read.csv("https://dl.dropboxusercontent.com/s/w0qv3o4bqro7o31/Mortality.csv?dl=1")
        
@@ -338,9 +338,9 @@ function(input, output, session){
           ################Pre-season data loading
           #Load Pre-season RunID, Escapement and Mortality Tables
           
-          PreRunIDTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/PreSeasonRunList.csv",sep=",",dtoken=token)
-          PreEscTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/PreSeasonEscapement.csv",sep=",",dtoken=token)
-          PreMortTab = drop_read_csv("InputTemplates/Periodic and Annual Report Tool/PreSeasonMortality.csv",sep=",",dtoken=token)
+          PreRunIDTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonRunList.csv",sep=",",dtoken=token)
+          PreEscTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonEscapement.csv",sep=",",dtoken=token)
+          PreMortTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonMortality.csv",sep=",",dtoken=token)
           
           #The below represents an alternate method of downloading files
           #PreRunIDTab = read.csv("https://dl.dropboxusercontent.com/s/fnfnwv1ihg3xi3i/PreSeasonRunList.csv?dl=1")
@@ -414,7 +414,7 @@ function(input, output, session){
               #Only include pre-season iterations if a TAMM is available in the TAMMList file, if blank do nothing.
               if (is.na(TAMMRow$PreTAMM[1]) == FALSE){
                 filePath <- file.path(tempdir(), "Pre_TAMM.xlsm")
-                drop_download(paste("Output/Preseason/TAMMs/TAMMFiles_4ModelRuns/", TAMMRow$PreTAMM[1], sep = ""), local_path = filePath, overwrite = TRUE, dtoken = token)
+                drop_download(paste("Output/Preseason/TAMMs/", TAMMRow$PreTAMM[1], sep = ""), local_path = filePath, overwrite = TRUE, dtoken = token)
                 PreTAMMDF <<- read_xlsx(filePath, sheet = '2')
               
                 for (j in 1:length(CoastalStockList)){
