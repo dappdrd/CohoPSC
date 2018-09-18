@@ -259,18 +259,27 @@ function(input, output, session){
      if (input$DataProcessButton == 0 | input$PasswordAdd != Password)
        return(NULL)
      isolate({
-       withProgress(message = 'Loading Data', value = 0, {
+       # if ("Escapement.csv" %in% drop_dir('Input/Annual and Periodic Report Tool/')$name == FALSE | "Mortality.csv" %in% drop_dir('Input/Annual and Periodic Report Tool/')$name == FALSE |
+       #     "RunList.csv" %in% drop_dir('Input/Annual and Periodic Report Tool/')$name == FALSE | "PreSeasonRunList.csv" %in% drop_dir('Input/Annual and Periodic Report Tool/')$name == FALSE |
+       #     "PreSeasonMortality.csv" %in% drop_dir('Input/Annual and Periodic Report Tool/')$name == FALSE | "PreSeasonEscapement.csv" %in% drop_dir('Input/Annual and Periodic Report Tool/')$name == FALSE){
+       #   showModal(modalDialog(
+       #     title = "Error message",
+       #     "There are errors with the name or pathing of the input files.  The files must be within the Input/Annual and Periodic Report Tool/    file path.  Ensure that all the files are in the dropbox, with correct case-sensitive names.  They must be called RunList.csv, Escapement.csv, Mortality.csv, PreSeasonRunList.csv, PreSeasonEscapement.csv, and PreSeasonMortality.csv"
+       #   ))
+       # }
+       # else{
+        withProgress(message = 'Loading Data', value = 0, {
           #Grabs FRAM RunID Table
           
           incProgress(1/2, detail = "Loading Post-Season Data - this may take a few minutes")
-          
+
           RunIDTab = drop_read_csv("Input/Annual and Periodic Report Tool/RunList.csv",sep=",",dtoken=token)
           #Alternate download method.
           #RunIDTab = read.csv("https://dl.dropboxusercontent.com/s/ntgampj1d8dyp26/RunList.csv?dl=1")
        
           #removes useless columns in the data
           Drops <- c("PrimaryKey", "SpeciesName", "RunTitle",
-                  "RunComments", "CreationDate", "ModifyInputDate", "RunTimeDate")
+                     "RunComments", "CreationDate", "ModifyInputDate", "RunTimeDate", "RunType")
           RunIDTab<- RunIDTab[ , !(names(RunIDTab) %in% Drops)]
        
           YearList<<- unique(RunIDTab$RunYear)
@@ -293,7 +302,7 @@ function(input, output, session){
           EscTab$TimeStep <- as.character(EscTab$TimeStep)
           EscTab$PrimaryKey <- as.character(EscTab$PrimaryKey)
           EscTab$BasePeriodID <- as.character(EscTab$BasePeriodID)
-       
+          
           #Grab FRAM Mortality Table
           MortTab = drop_read_csv("Input/Annual and Periodic Report Tool/Mortality.csv",sep=",",dtoken=token)
           #Alternate download method
@@ -338,6 +347,8 @@ function(input, output, session){
           ################Pre-season data loading
           #Load Pre-season RunID, Escapement and Mortality Tables
           
+          
+          
           PreRunIDTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonRunList.csv",sep=",",dtoken=token)
           PreEscTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonEscapement.csv",sep=",",dtoken=token)
           PreMortTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonMortality.csv",sep=",",dtoken=token)
@@ -349,7 +360,7 @@ function(input, output, session){
           
           #removes useless columns in the data
           Drops <- c("PrimaryKey", "SpeciesName", "RunTitle",
-                     "RunComments", "CreationDate", "ModifyInputDate", "RunTimeDate")
+                     "RunComments", "CreationDate", "ModifyInputDate", "RunTimeDate", "RunType")
           PreRunIDTab<- PreRunIDTab[ , !(names(PreRunIDTab) %in% Drops)]
           
           PreYearList<<- unique(PreRunIDTab$RunYear)
@@ -497,7 +508,6 @@ function(input, output, session){
           #make them global variables for use in the F Tables
           MortTab <<- MortTab
           EscTab <<- EscTab  
-          
           
        })
        
@@ -1506,7 +1516,8 @@ function(input, output, session){
           }
           
           
-       })
+         })
+       # }
      })
    })
    
