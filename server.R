@@ -2,6 +2,12 @@
 # CoTC Periodic Report code.  Server.R must be paired with Ui.R
 # 
 # App hosted by Shiny Servers
+#
+# Authors: Derek Dapp, Angelika Hagen-Breaux
+#
+# Contributors: CoTC
+#
+# Last Updated: 12/13/2019 by Derek Dapp
 ####################################################################################################
 
 #Sets the maximum application memory size to 8100 MB.  This is the maximum that a shiny app can handle.
@@ -10,6 +16,10 @@
 #options(shiny.maxRequestSize=4000000000)
 
 #used for sending emails
+#From a github repo, to install use the code below
+#install.packages("devtools", dep = T)
+#library(devtools)
+#devtools::install_github("rpremraj/mailR", host = "https://api.github.com")
 library(mailR)
 #used for connecting to db
 library(RODBC)
@@ -32,6 +42,10 @@ library(pool)
 #library(rsconnect)
 #For reading TAMMs (coastal iterations)
 library(readxl)
+library(xlsx)
+
+#This allows a maximum DB size of 100 MB
+options(shiny.maxRequestSize=100*1024^2) 
 
 #options(rsconnect.max.bundle.size=3145728000)
 #options(shiny.maxRequestSize=3145728000)
@@ -47,12 +61,6 @@ drop_acc(dtoken = token)
 Password <<- "rjdio"
 
 BlankDF <<- data.frame(Stock = as.character())
-
-FinalRunList <<- c("BASE.Cmd", "CB86.Cmd", "CB87.Cmd", "CB88.Cmd", "CB89.Cmd", "CB90.Cmd", "CB91.Cmd", "CB92.Cmd", "CB93.Cmd", "CB94.Cmd", "CB95.Cmd",
-                  "CB96.Cmd", "CB97.Cmd", "BK98 w UF H&W", "BK99 w UF H&W", "BK00 w UF H&W", "BK01 w UF H&W Reload Catches", "BK02 w UF H&W Reload catches",
-                  "BK03 w catches and BC cohorts", "BK04 w catches BCcohorts", "BK05 w catches and BC cohorts", "BK06 w catches and BC cohorts", 
-                  "BK07 catches and BC cohorts", "BK08.cmd", "BK09 New CNR", "bk10PSCFeb14", "Coho2011Post_PSC 2013", "Coho2012Post_PSC SSNPx2 Q Aug 22 BC MSF corrected",
-                  "bk 2013 Feb 11 2015 adjust GB recruits", "bc-BK2014 w TAMM inputs final#2", "bc-bkCoho2015 Final")
 
 #This sets up a stock DF that has all the necessary stock information to be used later
 #LAC = Low Abundance Cohort; UAC = Upper Abundance Cohort; LAMO = Low Abundance Management Objective (cap); MAMO = Moderate Abundance Management Objective,
@@ -83,8 +91,6 @@ HohTermRow <- data.frame(Stock = "Hoh", TerminalFish = c(73,74,75), TAMMPosition
 GHTermRow <- data.frame(Stock = "Grays Harbor", TerminalFish = c(48, 49, 50, 51, 53, 52, 54, 55, 56, 57, 58, 59, 60, 61), TAMMPosition = 37)
 CoastalTermFishDF <<- rbind(QueetsTermRow, QuillayuteTermRow, HohTermRow, GHTermRow)
 
-TAMMList<<-drop_read_csv("Input/Annual and Periodic Report Tool/TAMMList.csv",sep=",",dtoken=token)
-
 #Alternative way of reading in CSVs.
 #The above way is preferred because it downloads based upon the name of the file.
 #The method below breaks if a file is deleted on Dropbox, but is later readded.
@@ -108,6 +114,44 @@ function(input, output, session){
     rasterImage(jpg,1,1,res[1],res[2])
   }
   
+  #The below is used to get CSV files into data frames from those that are uploaded by the user
+  
+  TAMMList.file <- reactive({
+      inFile <- input$TAMMListInput
+      data.use <- read.csv(inFile$datapath, stringsAsFactors=FALSE)  
+      return(data.use)
+    })
+  PostSeason.RunID.file <- reactive({
+    inFile <- input$PostSeasRunIDInput
+    data.use <- read.csv(inFile$datapath, stringsAsFactors=FALSE)  
+    return(data.use)
+  })
+  PostSeason.Escapement.file <- reactive({
+    inFile <- input$PostSeasEscapementInput
+    data.use <- read.csv(inFile$datapath, stringsAsFactors=FALSE)  
+    return(data.use)
+  })
+  PostSeason.Mortality.file <- reactive({
+    inFile <- input$PostSeasMortalityInput
+    data.use <- read.csv(inFile$datapath, stringsAsFactors=FALSE)  
+    return(data.use)
+  })
+  PreSeason.RunID.file <- reactive({
+    inFile <- input$PreSeasRunIDInput
+    data.use <- read.csv(inFile$datapath, stringsAsFactors=FALSE)  
+    return(data.use)
+  })
+  PreSeason.Escapement.file <- reactive({
+    inFile <- input$PreSeasEscapementInput
+    data.use <- read.csv(inFile$datapath, stringsAsFactors=FALSE)  
+    return(data.use)
+  })
+  PreSeason.Mortality.file <- reactive({
+    inFile <- input$PreSeasMortalityInput
+    data.use <- read.csv(inFile$datapath, stringsAsFactors=FALSE)  
+    return(data.use)
+  })
+  
    observe({
      # Take a dependency on input$EmailButton
      if (input$EmailButton == 0 | input$PasswordAdd != Password)
@@ -117,139 +161,311 @@ function(input, output, session){
        
        withProgress(message = 'Sending Email', value = 0, {
          incProgress(1/1, detail = "Attaching Files")
+         
+         #This checks and makes sure that all data was filled out in the first form
+         if (exists("Fig41") == FALSE | exists("TableF1") == FALSE){
+           showModal(modalDialog(
+             title = "Error message",
+             "Please run the program to create the tables and figures prior to emailing."
+           ))
+         }
+         
+         else{
+         
+          #First, prepare an output file
+          filePath <- file.path(tempdir(), "CoTC_Output_File.xlsx")
+          
+          #Create a header for the Figures sheet
+          FigHeader <- data.frame(Figures = "Please scroll down to view figure files")
+          
+          #++++++++++++++++++++++++
+          # Helper function to add titles
+          #++++++++++++++++++++++++
+          # - sheet : sheet object to contain the title
+          # - rowIndex : numeric value indicating the row to 
+          #contain the title
+          # - title : the text to use as title
+          # - titleStyle : style object to use for title
+          xlsx.addTitle<-function(sheet, rowIndex, title){
+            rows <-createRow(sheet,rowIndex=rowIndex)
+            sheetTitle <-createCell(rows, colIndex=2)
+            setCellValue(sheetTitle[[1,1]], title)
+          }
+          
+          #Add in tables to output file
+          write.xlsx(Tab41DF, file = filePath, sheetName = "Table 4.1", append = FALSE)
+          write.xlsx(Tab42DF, file = filePath, sheetName = "Table 4.2", append = TRUE)
+          write.xlsx(Tab61DF, file = filePath, sheetName = "Table 6.1", append = TRUE)
+          write.xlsx(Tab62DF, file = filePath, sheetName = "Table 6.2", append = TRUE)
+          write.xlsx(Tab63DF, file = filePath, sheetName = "Table 6.3", append = TRUE)
+          write.xlsx(Tab9, file = filePath, sheetName = "Table 9", append = TRUE)
+          write.xlsx(TableE1, file = filePath, sheetName = "Table E - Lwr Fr", append = TRUE)
+          write.xlsx(TableE2, file = filePath, sheetName = "Table E - Int Fr", append = TRUE)
+          write.xlsx(TableE3, file = filePath, sheetName = "Table E - St G ML", append = TRUE)
+          write.xlsx(TableE4, file = filePath, sheetName = "Table E - St G VI", append = TRUE)
+          write.xlsx(TableE5, file = filePath, sheetName = "Table E - Skagit", append = TRUE)
+          write.xlsx(TableE6, file = filePath, sheetName = "Table E - Stil", append = TRUE)
+          write.xlsx(TableE7, file = filePath, sheetName = "Table E - Sno", append = TRUE)
+          write.xlsx(TableE8, file = filePath, sheetName = "Table E - HC", append = TRUE)
+          write.xlsx(TableE9, file = filePath, sheetName = "Table E - US JDF", append = TRUE)
+          write.xlsx(TableE10, file = filePath, sheetName = "Table E - Quil", append = TRUE)
+          write.xlsx(TableE11, file = filePath, sheetName = "Table E - Hoh", append = TRUE)
+          write.xlsx(TableE12, file = filePath, sheetName = "Table E - Queets", append = TRUE)
+          write.xlsx(TableE13, file = filePath, sheetName = "Table E - GH", append = TRUE)
+          write.xlsx(TableF10, file = filePath, sheetName = "Table F - Lwr Fr", append = TRUE)
+          write.xlsx(TableF11, file = filePath, sheetName = "Table F - Int Fr", append = TRUE)
+          write.xlsx(TableF12, file = filePath, sheetName = "Table F - St G ML", append = TRUE)
+          write.xlsx(TableF13, file = filePath, sheetName = "Table F - St G VI", append = TRUE)
+          write.xlsx(TableF1, file = filePath, sheetName = "Table F - Skagit", append = TRUE)
+          write.xlsx(TableF2, file = filePath, sheetName = "Table F - Stil", append = TRUE)
+          write.xlsx(TableF3, file = filePath, sheetName = "Table F - Sno", append = TRUE)
+          write.xlsx(TableF4, file = filePath, sheetName = "Table F - HC", append = TRUE)
+          write.xlsx(TableF5, file = filePath, sheetName = "Table F - US JDF", append = TRUE)
+          write.xlsx(TableF6, file = filePath, sheetName = "Table F - Quil", append = TRUE)
+          write.xlsx(TableF7, file = filePath, sheetName = "Table F - Hoh", append = TRUE)
+          write.xlsx(TableF8, file = filePath, sheetName = "Table F - Queets", append = TRUE)
+          write.xlsx(TableF9, file = filePath, sheetName = "Table F - GH", append = TRUE)
+          write.xlsx(FigHeader, file = filePath, sheetName = "Figures", append = TRUE)
+          
+          #Add in Figures to a single tab
+          wb <- loadWorkbook(filePath)
+          ws <- getSheets(wb)["Figures"][[1]]
+          xlsx.addTitle(ws, rowIndex=4, title="Figure 4.1")
+          xlsx.addTitle(ws, rowIndex=30, title="Figure 4.2")
+          xlsx.addTitle(ws, rowIndex=56, title="Figure 4.3")
+          xlsx.addTitle(ws, rowIndex=82, title="Figure 5.1")
+          xlsx.addTitle(ws, rowIndex=108, title="Figure 7.1")
+          xlsx.addTitle(ws, rowIndex=134, title="Figure 7.2")
+          xlsx.addTitle(ws, rowIndex=160, title="Figure 7.3")
+          xlsx.addTitle(ws, rowIndex=186, title="Figure 7.4")
+          xlsx.addTitle(ws, rowIndex=212, title="Figure 7.5")
+          xlsx.addTitle(ws, rowIndex=238, title="Figure 7.6")
+          xlsx.addTitle(ws, rowIndex=264, title="Figure 7.7")
+          xlsx.addTitle(ws, rowIndex=290, title="Figure 7.8")
+          xlsx.addTitle(ws, rowIndex=316, title="Figure 7.9")
+          xlsx.addTitle(ws, rowIndex=342, title="Figure 7.10")
+          xlsx.addTitle(ws, rowIndex=368, title="Figure 7.11")
+          xlsx.addTitle(ws, rowIndex=394, title="Figure 7.12")
+          xlsx.addTitle(ws, rowIndex=420, title="Figure 7.13")
+          
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig41)
+          dev.off()
+          
+          addPicture(file = PlotPath, sheet = ws, startRow = 5, startColumn = 2)
+          
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig42)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 31, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig43)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 57, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig51)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 83, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig71)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 109, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig72)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 135, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig73)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 161, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig74)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 187, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig75)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 213, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig76)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 239, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig77)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 265, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig78)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 291, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig79)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 317, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig710)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 343, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig711)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 369, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig712)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 395, startColumn = 2)
+
+          PlotPath <- file.path(tempdir(), paste("Tempplot.png", sep=""))
+          png(filename = PlotPath)
+          plot(Fig713)
+          dev.off()
+
+          addPicture(file = PlotPath, sheet = ws, startRow = 421, startColumn = 2)
+          
+          saveWorkbook(wb, filePath)
+          unlink(PlotPath)
+          
           #sends a mail from my dummy email address.
           send.mail(from = "derek.dapp.dfw@gmail.com",
-                 to = input$EmailAdd,
-                 subject = "Coho PSC Report Data",
-                 body = "Please see the attached for the PSC report files.  Note that tables are encoded as html files.  These can be converted to tables by saving the files as a .html rather than .txt and opening the file with your web browser.",
-                 smtp = list(host.name = "smtp.gmail.com", port = 465, user.name = "derek.dapp.dfw@gmail.com", passwd = "FakePass2", ssl = TRUE),
-                 authenticate = TRUE,
-                 send = TRUE,
-                 
-                 attach.files = c("https://dl.dropboxusercontent.com/s/hcs00f0905rjzhs/Figure%204.1.jpg",
-                                  "https://dl.dropboxusercontent.com/s/3uqyu575wh7gqy1/Figure%204.2.jpg",
-                                  "https://dl.dropboxusercontent.com/s/1pgvvbk4pybdlsq/Figure%204.3.jpg",
-                                  "https://dl.dropboxusercontent.com/s/jfixoelgmy1ul1j/Table%204.1.csv",
-                                  "https://dl.dropboxusercontent.com/s/80o48hz7cj37twp/Table%204.2.csv",
-                                  "https://dl.dropboxusercontent.com/s/gv8sv9pskzupmbz/Figure%205.1.jpg",
-                                  "https://dl.dropboxusercontent.com/s/krqxxql4rqegx0y/Table%206.1.csv",
-                                  "https://dl.dropboxusercontent.com/s/k3xr5opc1w68xiv/Table%206.2.csv",
-                                  "https://dl.dropboxusercontent.com/s/f88449fcv6f95cl/Table%206.3.csv",
-                                  "https://dl.dropboxusercontent.com/s/6egvsdm8kdlnrtt/Fig71.jpg",
-                                  "https://dl.dropboxusercontent.com/s/l9s9n9naywttg9k/Fig72.jpg",
-                                  "https://dl.dropboxusercontent.com/s/0kj2z9xhy8ule61/Fig73.jpg",
-                                  "https://dl.dropboxusercontent.com/s/d90nw2mwz8n2bh3/Fig74.jpg",
-                                  "https://dl.dropboxusercontent.com/s/g5q7eovqmc073th/Fig75.jpg",
-                                  "https://dl.dropboxusercontent.com/s/mqg6niijeveg23e/Fig76.jpg",
-                                  "https://dl.dropboxusercontent.com/s/7m2swe2inmasiyt/Fig77.jpg",
-                                  "https://dl.dropboxusercontent.com/s/6hz71gw1ccknvx2/Fig78.jpg",
-                                  "https://dl.dropboxusercontent.com/s/5zvr70kzybd8371/Fig79.jpg",
-                                  "https://dl.dropboxusercontent.com/s/wbjf63f3gqttg3s/Fig710.jpg",
-                                  "https://dl.dropboxusercontent.com/s/hj74qaq5qdhyn71/Fig711.jpg",
-                                  "https://dl.dropboxusercontent.com/s/8p5j3gth98o24ia/Fig712.jpg",
-                                  "https://dl.dropboxusercontent.com/s/zesrv0febmbvxe9/Fig713.jpg",
-                                  "https://dl.dropboxusercontent.com/s/myc03momk2prex0/Table%209.csv",
-                                   
-                                  "https://dl.dropboxusercontent.com/s/qmmnqsjdqribu5e/TableE1%20Lower%20Fraser.csv",
-                                  "https://dl.dropboxusercontent.com/s/adija3qadrzjcl6/TableE2%20Interior%20Fraser.csv",
-                                  "https://dl.dropboxusercontent.com/s/mrtimsg8r2z528q/TableE3%20Georgia%20Strait%20ML.csv",
-                                  "https://dl.dropboxusercontent.com/s/lqc80r3adzd69h6/TableE4%20Georgia%20Strait%20VI.csv",
-                                  "https://dl.dropboxusercontent.com/s/idf9p6dpmxz6i0m/TableE5%20Skagit.csv",
-                                  "https://dl.dropboxusercontent.com/s/5wlmcql49b8xyoy/TableE6%20Stillaguamish.csv",
-                                  "https://dl.dropboxusercontent.com/s/q2rnre6fjne4wm2/TableE7%20Snohomish.csv",
-                                  "https://dl.dropboxusercontent.com/s/8tu0zwh7le45nxd/TableE8%20Hood%20Canal.csv",
-                                  "https://dl.dropboxusercontent.com/s/pztmval5grcvkf7/TableE9%20US%20Strait%20JDF.csv",
-                                  "https://dl.dropboxusercontent.com/s/yze2un9drmvallq/TableE10%20Quillayute.csv",
-                                  "https://dl.dropboxusercontent.com/s/89dubn1k3tu8y4n/TableE11%20Hoh.csv",
-                                  "https://dl.dropboxusercontent.com/s/l19nm54at4crk6i/TableE12%20Queets.csv",
-                                  "https://dl.dropboxusercontent.com/s/bzb1zrb6gosa6e0/TableE13%20Grays%20Harbor.csv",
-                                   
-                                  "https://dl.dropboxusercontent.com/s/7zqmbprtmbk8nxl/Table%20F%20-%20Lower%20Fraser.csv",
-                                  "https://dl.dropboxusercontent.com/s/cei2p1bozt1fxj3/Table%20F%20-%20Interior%20Fraser.csv",
-                                  "https://dl.dropboxusercontent.com/s/aw5h7d76dcodnva/Table%20F%20-%20St%20of%20Geo%20ML.csv",
-                                  "https://dl.dropboxusercontent.com/s/fb3u4v0p48muyky/Table%20F%20-%20St%20of%20Geo%20VI.csv",
-                                  "https://dl.dropboxusercontent.com/s/5f5ux504otvvc2o/Table%20F%20-%20Skagit.csv",
-                                  "https://dl.dropboxusercontent.com/s/w4fyrlcpxf5yx82/Table%20F%20-%20Stillaguamish.csv",
-                                  "https://dl.dropboxusercontent.com/s/x1y7ooxd9hmgeae/Table%20F%20-%20Snohomish.csv",
-                                  "https://dl.dropboxusercontent.com/s/jjwii2dzgx51igp/Table%20F%20-%20Hood%20Canal.csv",
-                                  "https://dl.dropboxusercontent.com/s/qhxhw82xu1zi793/Table%20F%20-%20US%20JDF.csv",
-                                  "https://dl.dropboxusercontent.com/s/wlnjr6lnxdlkg8u/Table%20F%20-%20Quillayute.csv",
-                                  "https://dl.dropboxusercontent.com/s/sbh0hhzzy910asx/Table%20F%20-%20Hoh.csv",
-                                  "https://dl.dropboxusercontent.com/s/41xxblf8bd1mptc/Table%20F%20-%20Queets.csv",
-                                  "https://dl.dropboxusercontent.com/s/bopag2x5lahvo9b/Table%20F%20-%20Grays%20Harbor.csv",
-                                  
-                                  "https://dl.dropboxusercontent.com/s/vqtc3szas8kp39z/Table%204.1%20html.txt",
-                                  "https://dl.dropboxusercontent.com/s/h5pkx6d2om48fm1/Table%204.2%20html.txt",
-                                  "https://dl.dropboxusercontent.com/s/rvjhj3qa0bnoizd/Table%206.1%20html.txt",
-                                  "https://dl.dropboxusercontent.com/s/8etihpkdnrxld2e/Table%206.2%20html.txt",
-                                  "https://dl.dropboxusercontent.com/s/7zqmbprtmbk8nxl/s/2lmxq11z5n68ly1/Table%206.3%20html.txt"),
-                 
-                 # The below command is if using Derek's Dropbox.
-                 # attach.files = c("https://dl.dropboxusercontent.com/s/jti9io6bufr0k4j/Figure%204.1.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/2twmtoi8m1sur4r/Figure%204.2.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/9t2ozw5ir86covl/Figure%204.3.jpg", 
-                 #                  "https://dl.dropboxusercontent.com/s/3cmw8yda3677ls5/Table%204.1%20html.txt",
-                 #                  "https://dl.dropboxusercontent.com/s/cih9ma0vtly8a72/Table%204.2%20html.txt",
-                 #                  "https://dl.dropboxusercontent.com/s/4g48qbf6kstpb6d/Figure%205.1.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/38bwwvqhavtgw5p/Table%206.1%20html.txt",
-                 #                  "https://dl.dropboxusercontent.com/s/42hz2sen7szcfps/Table%206.2%20html.txt",
-                 #                  "https://dl.dropboxusercontent.com/s/4n3k8gatiskppa2/Table%206.3%20html.txt",
-                 #                  "https://dl.dropboxusercontent.com/s/kuhyt00y4kr2ivf/Fig71.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/kqz9jx32h6aiek0/Fig72.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/tuya8vhn9ayrg1f/Fig73.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/nvx6tjaqat1wc8n/Fig74.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/3uk4kktxlt9kdtp/Fig75.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/dnal6uhxcyughbe/Fig76.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/bst9kdx5pnya8zi/Fig77.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/8vvmquab1z6o7od/Fig78.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/izk583dv0v39vi9/Fig79.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/rwvdcqwk410mrrv/Fig710.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/tri09bacabye2kq/Fig711.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/p8t646v5rwnqaga/Fig712.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/f0l65a9pit6fi0d/Fig713.jpg",
-                 #                  "https://dl.dropboxusercontent.com/s/a2mtb0dh15njfl3/Table%209.csv",
-                 #                  
-                 #                  "https://dl.dropboxusercontent.com/s/xa24cjc8tj3cy3c/TableE1%20Lower%20Fraser.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/y324609sm51ck3l/TableE2%20Interior%20Fraser.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/39vu1uexj7q2x23/TableE3%20Georgia%20Strait%20ML.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/k3n0icabqyt7c0x/TableE4%20Georgia%20Strait%20VI.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/azdffjrn23qqwyf/TableE5%20Skagit.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/r3pwdwf6aol0yei/TableE6%20Stillaguamish.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/oks451x06msb3m9/TableE7%20Snohomish.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/viy586snvllk5ep/TableE8%20Hood%20Canal.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/tzhb6x4irwfl1wv/TableE9%20US%20Strait%20JDF.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/hj89pnyt9ool026/TableE10%20Quillayute.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/ldjm30ovei8vw7q/TableE11%20Hoh.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/oinc0ocu4lc4a5d/TableE12%20Queets.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/681e4dv68u62nz4/TableE13%20Grays%20Harbor.csv",
-                 # 
-                 #                  "https://dl.dropboxusercontent.com/s/3gup4wp347syq6d/Table%20F%20-%20Lower%20Fraser.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/77g6vdw95ggqp1w/Table%20F%20-%20Interior%20Fraser.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/21nczz5t82mf14p/Table%20F%20-%20St%20of%20Geo%20ML.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/lkgmddt7jc60bok/Table%20F%20-%20St%20of%20Geo%20VI.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/che8dnucqxjjty2/Table%20F%20-%20Skagit.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/s1eizqt9k49objd/Table%20F%20-%20Stillaguamish.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/5mm6b7h3r8gd1nz/Table%20F%20-%20Snohomish.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/4m40ow5m1dw4svw/Table%20F%20-%20Hood%20Canal.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/qvetwz7er2d6pgf/Table%20F%20-%20US%20JDF.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/t8ohzyk0sh37r9e/Table%20F%20-%20Quillayute.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/c5cgq9cbtrzlecm/Table%20F%20-%20Hoh.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/8pvivydowzu8ic4/Table%20F%20-%20Queets.csv",
-                 #                  "https://dl.dropboxusercontent.com/s/xu44i9ot1sss08x/Table%20F%20-%20Grays%20Harbor.csv"),
-                 file.descriptions = c("Figure 4.1", "Figure 4.2", "Figure 4.3", "Table 4.1","Table 4.2", "Figure 5.1", "Table 6.1","Table 6.2",
-                                       "Table 6.3","Figure 7.1","Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5", "Figure 7.6", "Figure 7.7", "Figure 7.8",
-                                       "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13", "Table 9",
-                                       "Table E - Lower Fraser", "Table E - Interior Fraser", "Table E - St of Geo ML",
-                                       "Table E - St of Geo VI", "Table E - Skagit", "Table E - Stillaguamish",
-                                       "Table E - Snohomish", "Table E - Hood Canal", "Table E - US JDF",
-                                       "Table E - Quillayute", "Table E - Hoh", "Table E - Queets", "Table E - Grays Harbor",
-                                       "Table F - Lower Fraser", "Table F - Interior Fraser", "Table F - St of Geo ML",
-                                       "Table F - St of Geo VI", "Table F - Skagit", "Table F - Stillaguamish",
-                                       "Table F - Snohomish", "Table F - Hood Canal", "Table F - US JDF",
-                                       "Table F - Quillayute", "Table F - Hoh", "Table F - Queets", "Table F - Grays Harbor",
-                                       "Table 4.1 as HTML", "Table 4.2 as HTML", "Table 6.1 as HTML",
-                                       "Table 6.2 as HTML", "Table 6.3 as HTML"), # optional parameter
-                 debug = TRUE)
+                    to = input$EmailAdd,
+                    subject = "Coho PSC Report Data",
+                    body = "Please see the attached for the PSC report files.",
+                    smtp = list(host.name = "smtp.gmail.com", port = 465, user.name = "derek.dapp.dfw@gmail.com", passwd = "FakePass2", ssl = TRUE),
+                    authenticate = TRUE,
+                    send = TRUE,
+                    
+                    attach.files = c(filePath),
+                    file.descriptions = c("CoTC Periodic Report Tables and Figures"),
+                    debug = TRUE)
+          
+          # The code commented out below is to have the email take files directly from dropbox than the program.
+          # I've left it in just in case that old style is preferred.
+          # send.mail(from = "derek.dapp.dfw@gmail.com",
+          #        to = input$EmailAdd,
+          #        subject = "Coho PSC Report Data",
+          #        body = "Please see the attached for the PSC report files.  Note that tables are encoded as html files.  These can be converted to tables by saving the files as a .html rather than .txt and opening the file with your web browser.",
+          #        smtp = list(host.name = "smtp.gmail.com", port = 465, user.name = "derek.dapp.dfw@gmail.com", passwd = "FakePass2", ssl = TRUE),
+          #        authenticate = TRUE,
+          #        send = TRUE,
+          #        
+          #        attach.files = c("https://dl.dropboxusercontent.com/s/l79chkiz4mnyvos/Figure4.1.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/3uqyu575wh7gqy1/Figure%204.2.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/1pgvvbk4pybdlsq/Figure%204.3.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/jfixoelgmy1ul1j/Table%204.1.csv",
+          #                         "https://dl.dropboxusercontent.com/s/80o48hz7cj37twp/Table%204.2.csv",
+          #                         "https://dl.dropboxusercontent.com/s/gv8sv9pskzupmbz/Figure%205.1.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/krqxxql4rqegx0y/Table%206.1.csv",
+          #                         "https://dl.dropboxusercontent.com/s/k3xr5opc1w68xiv/Table%206.2.csv",
+          #                         "https://dl.dropboxusercontent.com/s/f88449fcv6f95cl/Table%206.3.csv",
+          #                         "https://dl.dropboxusercontent.com/s/6egvsdm8kdlnrtt/Fig71.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/l9s9n9naywttg9k/Fig72.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/0kj2z9xhy8ule61/Fig73.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/d90nw2mwz8n2bh3/Fig74.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/g5q7eovqmc073th/Fig75.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/mqg6niijeveg23e/Fig76.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/7m2swe2inmasiyt/Fig77.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/6hz71gw1ccknvx2/Fig78.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/5zvr70kzybd8371/Fig79.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/wbjf63f3gqttg3s/Fig710.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/hj74qaq5qdhyn71/Fig711.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/8p5j3gth98o24ia/Fig712.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/zesrv0febmbvxe9/Fig713.jpg",
+          #                         "https://dl.dropboxusercontent.com/s/myc03momk2prex0/Table%209.csv",
+          #                          
+          #                         "https://dl.dropboxusercontent.com/s/qmmnqsjdqribu5e/TableE1%20Lower%20Fraser.csv",
+          #                         "https://dl.dropboxusercontent.com/s/adija3qadrzjcl6/TableE2%20Interior%20Fraser.csv",
+          #                         "https://dl.dropboxusercontent.com/s/mrtimsg8r2z528q/TableE3%20Georgia%20Strait%20ML.csv",
+          #                         "https://dl.dropboxusercontent.com/s/lqc80r3adzd69h6/TableE4%20Georgia%20Strait%20VI.csv",
+          #                         "https://dl.dropboxusercontent.com/s/idf9p6dpmxz6i0m/TableE5%20Skagit.csv",
+          #                         "https://dl.dropboxusercontent.com/s/5wlmcql49b8xyoy/TableE6%20Stillaguamish.csv",
+          #                         "https://dl.dropboxusercontent.com/s/q2rnre6fjne4wm2/TableE7%20Snohomish.csv",
+          #                         "https://dl.dropboxusercontent.com/s/8tu0zwh7le45nxd/TableE8%20Hood%20Canal.csv",
+          #                         "https://dl.dropboxusercontent.com/s/pztmval5grcvkf7/TableE9%20US%20Strait%20JDF.csv",
+          #                         "https://dl.dropboxusercontent.com/s/yze2un9drmvallq/TableE10%20Quillayute.csv",
+          #                         "https://dl.dropboxusercontent.com/s/89dubn1k3tu8y4n/TableE11%20Hoh.csv",
+          #                         "https://dl.dropboxusercontent.com/s/l19nm54at4crk6i/TableE12%20Queets.csv",
+          #                         "https://dl.dropboxusercontent.com/s/bzb1zrb6gosa6e0/TableE13%20Grays%20Harbor.csv",
+          #                          
+          #                         "https://dl.dropboxusercontent.com/s/7zqmbprtmbk8nxl/Table%20F%20-%20Lower%20Fraser.csv",
+          #                         "https://dl.dropboxusercontent.com/s/cei2p1bozt1fxj3/Table%20F%20-%20Interior%20Fraser.csv",
+          #                         "https://dl.dropboxusercontent.com/s/aw5h7d76dcodnva/Table%20F%20-%20St%20of%20Geo%20ML.csv",
+          #                         "https://dl.dropboxusercontent.com/s/fb3u4v0p48muyky/Table%20F%20-%20St%20of%20Geo%20VI.csv",
+          #                         "https://dl.dropboxusercontent.com/s/5f5ux504otvvc2o/Table%20F%20-%20Skagit.csv",
+          #                         "https://dl.dropboxusercontent.com/s/w4fyrlcpxf5yx82/Table%20F%20-%20Stillaguamish.csv",
+          #                         "https://dl.dropboxusercontent.com/s/x1y7ooxd9hmgeae/Table%20F%20-%20Snohomish.csv",
+          #                         "https://dl.dropboxusercontent.com/s/jjwii2dzgx51igp/Table%20F%20-%20Hood%20Canal.csv",
+          #                         "https://dl.dropboxusercontent.com/s/qhxhw82xu1zi793/Table%20F%20-%20US%20JDF.csv",
+          #                         "https://dl.dropboxusercontent.com/s/wlnjr6lnxdlkg8u/Table%20F%20-%20Quillayute.csv",
+          #                         "https://dl.dropboxusercontent.com/s/sbh0hhzzy910asx/Table%20F%20-%20Hoh.csv",
+          #                         "https://dl.dropboxusercontent.com/s/41xxblf8bd1mptc/Table%20F%20-%20Queets.csv",
+          #                         "https://dl.dropboxusercontent.com/s/bopag2x5lahvo9b/Table%20F%20-%20Grays%20Harbor.csv",
+          #                         
+          #                         "https://dl.dropboxusercontent.com/s/vqtc3szas8kp39z/Table%204.1%20html.txt",
+          #                         "https://dl.dropboxusercontent.com/s/h5pkx6d2om48fm1/Table%204.2%20html.txt",
+          #                         "https://dl.dropboxusercontent.com/s/rvjhj3qa0bnoizd/Table%206.1%20html.txt",
+          #                         "https://dl.dropboxusercontent.com/s/8etihpkdnrxld2e/Table%206.2%20html.txt",
+          #                         "https://dl.dropboxusercontent.com/s/7zqmbprtmbk8nxl/s/2lmxq11z5n68ly1/Table%206.3%20html.txt"),
+          #        
+          #        file.descriptions = c("Figure 4.1", "Figure 4.2", "Figure 4.3", "Table 4.1","Table 4.2", "Figure 5.1", "Table 6.1","Table 6.2",
+          #                              "Table 6.3","Figure 7.1","Figure 7.2", "Figure 7.3", "Figure 7.4", "Figure 7.5", "Figure 7.6", "Figure 7.7", "Figure 7.8",
+          #                              "Figure 7.9", "Figure 7.10", "Figure 7.11", "Figure 7.12", "Figure 7.13", "Table 9",
+          #                              "Table E - Lower Fraser", "Table E - Interior Fraser", "Table E - St of Geo ML",
+          #                              "Table E - St of Geo VI", "Table E - Skagit", "Table E - Stillaguamish",
+          #                              "Table E - Snohomish", "Table E - Hood Canal", "Table E - US JDF",
+          #                              "Table E - Quillayute", "Table E - Hoh", "Table E - Queets", "Table E - Grays Harbor",
+          #                              "Table F - Lower Fraser", "Table F - Interior Fraser", "Table F - St of Geo ML",
+          #                              "Table F - St of Geo VI", "Table F - Skagit", "Table F - Stillaguamish",
+          #                              "Table F - Snohomish", "Table F - Hood Canal", "Table F - US JDF",
+          #                              "Table F - Quillayute", "Table F - Hoh", "Table F - Queets", "Table F - Grays Harbor",
+          #                              "Table 4.1 as HTML", "Table 4.2 as HTML", "Table 6.1 as HTML",
+          #                              "Table 6.2 as HTML", "Table 6.3 as HTML"), # optional parameter
+          #        debug = TRUE)
+         }
        })
      })
    })
@@ -272,8 +488,10 @@ function(input, output, session){
           #Grabs FRAM RunID Table
           
           incProgress(1/2, detail = "Loading Post-Season Data - this may take a few minutes")
-
-          RunIDTab = drop_read_csv("Input/Annual and Periodic Report Tool/RunList.csv",sep=",",dtoken=token)
+          TAMMList <- TAMMList.file()
+          
+          RunIDTab <- PostSeason.RunID.file()
+          #RunIDTab = drop_read_csv("Input/Annual and Periodic Report Tool/RunList.csv",sep=",",dtoken=token)
           #Alternate download method.
           #RunIDTab = read.csv("https://dl.dropboxusercontent.com/s/ntgampj1d8dyp26/RunList.csv?dl=1")
        
@@ -287,7 +505,8 @@ function(input, output, session){
           
           #Grabs FRAM Escapement Table
           
-          EscTab = drop_read_csv("Input/Annual and Periodic Report Tool/Escapement.csv",sep=",",dtoken=token)
+          EscTab <- PostSeason.Escapement.file()
+          #EscTab = drop_read_csv("Input/Annual and Periodic Report Tool/Escapement.csv",sep=",",dtoken=token)
           #Alternate download method
           #EscTab = read.csv("https://dl.dropboxusercontent.com/s/y5f8kx4v4pxnnrh/Escapement.csv?dl=1")
        
@@ -304,7 +523,8 @@ function(input, output, session){
           EscTab$BasePeriodID <- as.character(EscTab$BasePeriodID)
           
           #Grab FRAM Mortality Table
-          MortTab = drop_read_csv("Input/Annual and Periodic Report Tool/Mortality.csv",sep=",",dtoken=token)
+          MortTab <- PostSeason.Mortality.file()
+          #MortTab = drop_read_csv("Input/Annual and Periodic Report Tool/Mortality.csv",sep=",",dtoken=token)
           #Alternate download method
           #MortTab = read.csv("https://dl.dropboxusercontent.com/s/w0qv3o4bqro7o31/Mortality.csv?dl=1")
        
@@ -346,12 +566,13 @@ function(input, output, session){
           
           ################Pre-season data loading
           #Load Pre-season RunID, Escapement and Mortality Tables
+          PreRunIDTab <- PreSeason.RunID.file()
+          PreEscTab <- PreSeason.Escapement.file()
+          PreMortTab <- PreSeason.Mortality.file()
           
-          
-          
-          PreRunIDTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonRunList.csv",sep=",",dtoken=token)
-          PreEscTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonEscapement.csv",sep=",",dtoken=token)
-          PreMortTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonMortality.csv",sep=",",dtoken=token)
+          #PreRunIDTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonRunList.csv",sep=",",dtoken=token)
+          #PreEscTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonEscapement.csv",sep=",",dtoken=token)
+          #PreMortTab = drop_read_csv("Input/Annual and Periodic Report Tool/PreSeasonMortality.csv",sep=",",dtoken=token)
           
           #The below represents an alternate method of downloading files
           #PreRunIDTab = read.csv("https://dl.dropboxusercontent.com/s/fnfnwv1ihg3xi3i/PreSeasonRunList.csv?dl=1")
@@ -368,7 +589,7 @@ function(input, output, session){
           
           #Adds run info to EscTab
           PreEscTab <- merge(PreEscTab, PreRunIDTab, by= "RunID")
-          
+
           #Convert integers to characters
           PreEscTab$RunID <- as.character(PreEscTab$RunID)
           PreEscTab$RunYear <- as.character(PreEscTab$RunYear)
@@ -377,18 +598,18 @@ function(input, output, session){
           PreEscTab$TimeStep <- as.character(PreEscTab$TimeStep)
           PreEscTab$PrimaryKey <- as.character(PreEscTab$PrimaryKey)
           PreEscTab$BasePeriodID <- as.character(PreEscTab$BasePeriodID)
-          
+
           #Get summarized Mortalities
-          PreMortTab$TotMort <- PreMortTab$LandedCatch + PreMortTab$NonRetention + PreMortTab$Shaker + 
+          PreMortTab$TotMort <- PreMortTab$LandedCatch + PreMortTab$NonRetention + PreMortTab$Shaker +
             PreMortTab$DropOff + PreMortTab$MSFLandedCatch + PreMortTab$MSFNonRetention + PreMortTab$MSFShaker + PreMortTab$MSFDropOff
-          
+
           #Remove columns no longer of interest
           Keeps <- c("RunID", "StockID", "Age", "FisheryID", "TimeStep", "TotMort")
           PreMortTab <- PreMortTab[, (names(PreMortTab) %in% Keeps)]
-          
+
           #Adds run info to Mort Tab
           PreMortTab <- merge(PreMortTab, PreRunIDTab, by= "RunID")
-          
+
           #Convert integers to characters
           PreMortTab$RunID <- as.character(PreMortTab$RunID)
           PreMortTab$RunYear <- as.character(PreMortTab$RunYear)
@@ -397,158 +618,173 @@ function(input, output, session){
           PreMortTab$TimeStep <- as.character(PreMortTab$TimeStep)
           PreMortTab$BasePeriodID <- as.character(PreMortTab$BasePeriodID)
           PreMortTab$FisheryID <- as.character(PreMortTab$FisheryID)
-          
+
           #This is the Esc DF to which all ESC data is saved
           PreMainEscDF <- data.frame(RunYear = as.character(), Escapement= as.double(), Stock = as.character())
           #This is the Mort DF to which all mort data is saved
           PreMainMortDF <- data.frame(RunYear = as.character(), TotMort= as.double(), Stock = as.character())
-          
+
           #This is a list of stocks to perform coastal iterations on
-          if(input$TAMMAdd == "Yes - All Stocks"){
-            CoastalStockList <- c("Queets", "Quillayute", "Hoh", "Grays Harbor")
+          if(input$TAMMAddPost == "Yes - All Stocks"){
+            CoastalStockListPost <- c("Queets", "Quillayute", "Hoh", "Grays Harbor")
           }
-          if(input$TAMMAdd == "Yes - Queets Only"){
-            CoastalStockList <- c("Queets")
+          if(input$TAMMAddPost == "Yes - Queets Only"){
+            CoastalStockListPost <- c("Queets")
           }
-          
+          if(input$TAMMAddPre == "Yes - All Stocks"){
+            CoastalStockListPre <- c("Queets", "Quillayute", "Hoh", "Grays Harbor")
+          }
+          if(input$TAMMAddPre == "Yes - Queets Only"){
+            CoastalStockListPre <- c("Queets")
+          }
+
           ######## This section corrects Coastal Stocks, but only if prompted by the user
           ######## Post-season and pre-season are done separately.
           ######## This is because there may be a pre-season TAMM but no post-season TAMM.
-          if(input$TAMMAdd == "Yes - All Stocks" | input$TAMMAdd == "Yes - Queets Only"){
-            
+          if(input$TAMMAddPre == "Yes - All Stocks" | input$TAMMAddPre == "Yes - Queets Only"){
+
             availableTAMMyears <- unique(subset(TAMMList, year %in% YearList)$year)
-            
+
             for(i in 1:length(availableTAMMyears)){
-            
+
               TAMMRow <- subset(TAMMList, year == availableTAMMyears[i])
-            
+
               #Only include pre-season iterations if a TAMM is available in the TAMMList file, if blank do nothing.
               if (is.na(TAMMRow$PreTAMM[1]) == FALSE){
                 filePath <- file.path(tempdir(), "Pre_TAMM.xlsm")
                 drop_download(paste("Output/Preseason/TAMMs/", TAMMRow$PreTAMM[1], sep = ""), local_path = filePath, overwrite = TRUE, dtoken = token)
                 PreTAMMDF <<- read_xlsx(filePath, sheet = '2')
-              
-                for (j in 1:length(CoastalStockList)){
+
+                for (j in 1:length(CoastalStockListPre)){
                   #This subsets data frames to get the list of terminal fisheries and FRAMIDs for the stock
-                  TerminalFisheriesList <- unique(subset(CoastalTermFishDF, Stock == CoastalStockList[j])$TerminalFish)
-                  CoastalFRAMStks <- unique(subset(StockDF, StockName == CoastalStockList[j])$FRAMWildStocks)
-                
+                  TerminalFisheriesList <- unique(subset(CoastalTermFishDF, Stock == CoastalStockListPre[j])$TerminalFish)
+                  CoastalFRAMStks <- unique(subset(StockDF, StockName == CoastalStockListPre[j])$FRAMWildStocks)
+
                   #This gets the column number for the stock in table 2 of TAMM
-                  TAMMLocation <- subset(CoastalTermFishDF, Stock == CoastalStockList[j])$TAMMPosition[1]
-                
+                  TAMMLocation <- subset(CoastalTermFishDF, Stock == CoastalStockListPre[j])$TAMMPosition[1]
+
                   #This changes the total mortality of any terminal fisheries for a given stock to 0
                   PreMortTab$TotMort[PreMortTab$StockID %in% CoastalFRAMStks & PreMortTab$FisheryID %in% TerminalFisheriesList & PreMortTab$RunYear == TAMMRow$year[1]] <- 0
-                
+
                   #This changes the escapement a given stock to 0
                   PreEscTab$Escapement[PreEscTab$StockID %in% CoastalFRAMStks & PreEscTab$RunYear == TAMMRow$year[1]] <- 0
-                
+
                   #Finds the location in PreMortTab of the terminal fisheries rows for a given stock
                   TermFishLocations <- which(PreMortTab$StockID %in% CoastalFRAMStks & PreMortTab$FisheryID %in% TerminalFisheriesList & PreMortTab$RunYear == TAMMRow$year[1])
-                
+
                   #Lumps together FW Sport and Net catches into the first row that has a terminal fishery
                   #FW net and sport are combined in table 3 so no need to differentiate between the two
                   PreMortTab$TotMort[TermFishLocations[1]] <- as.numeric(PreTAMMDF[37,TAMMLocation]) + as.numeric(PreTAMMDF[38,TAMMLocation])
-                
+
                   #For Gray's Harbor, there is also FW Net
-                  if(CoastalStockList[i] == "Grays Harbor"){
+                  if(CoastalStockListPre[j] == "Grays Harbor"){
                     PreMortTab$TotMort[TermFishLocations[1]] <- PreMortTab$TotMort[TermFishLocations[1]] + as.numeric(PreTAMMDF[36,TAMMLocation])
                   }
-                
+
                   #Finds the location in PreEscTab of the given stock
                   EscLocations <- which(PreEscTab$StockID %in% CoastalFRAMStks & PreEscTab$RunYear == TAMMRow$year[1])
-                
+
                   #Adds in Escapement, like the above, it just sticks it into the first slot if there are multiple stocks
                   PreEscTab$Escapement[EscLocations[1]] <- as.numeric(PreTAMMDF[47,TAMMLocation])
                 }
               }
-            
+            }
+          }
+          if(input$TAMMAddPost == "Yes - All Stocks" | input$TAMMAddPost == "Yes - Queets Only"){
+
+            availableTAMMyears <- unique(subset(TAMMList, year %in% YearList)$year)
+
+            for(i in 1:length(availableTAMMyears)){
+
+              TAMMRow <- subset(TAMMList, year == availableTAMMyears[i])
+
               #Only include post-season iterations if a TAMM is available in the TAMMList file, if blank do nothing.
               if (is.na(TAMMRow$PostTAMM[1]) == FALSE){
                 #Queets - Postseason
-              
+
                 filePath <- file.path(tempdir(), "Post_TAMM.xlsm")
                 drop_download(paste("Output/Postseason/TAMMs/", TAMMRow$PostTAMM[1], sep = ""), local_path = filePath, overwrite = TRUE, dtoken = token)
                 PostTAMMDF <<- read_xlsx(filePath, sheet = '2')
-              
-                for (j in 1:length(CoastalStockList)){
+
+                for (j in 1:length(CoastalStockListPost)){
                   #This subsets data frames to get the list of terminal fisheries and FRAMIDs for the stock
-                  TerminalFisheriesList <- unique(subset(CoastalTermFishDF, Stock == CoastalStockList[j])$TerminalFish)
-                  CoastalFRAMStks <- unique(subset(StockDF, StockName == CoastalStockList[j])$FRAMWildStocks)
-              
+                  TerminalFisheriesList <- unique(subset(CoastalTermFishDF, Stock == CoastalStockListPost[j])$TerminalFish)
+                  CoastalFRAMStks <- unique(subset(StockDF, StockName == CoastalStockListPost[j])$FRAMWildStocks)
+
                   #This gets the column number for the stock in table 2 of TAMM
-                  TAMMLocation <- subset(CoastalTermFishDF, Stock == CoastalStockList[j])$TAMMPosition[1]
-               
+                  TAMMLocation <- subset(CoastalTermFishDF, Stock == CoastalStockListPost[j])$TAMMPosition[1]
+
                   #This changes the total mortality of any terminal fisheries for a given stock to 0
                   MortTab$TotMort[MortTab$StockID %in% CoastalFRAMStks & MortTab$FisheryID %in% TerminalFisheriesList & MortTab$RunYear == TAMMRow$year[1]] <- 0
-              
+
                   #This changes the escapement a given stock to 0
                   EscTab$Escapement[EscTab$StockID %in% CoastalFRAMStks & EscTab$RunYear == TAMMRow$year[1]] <- 0
-              
+
                   #Finds the location in PostMortTab of the terminal fisheries rows for a given stock
                   TermFishLocations <- which(MortTab$StockID %in% CoastalFRAMStks & MortTab$FisheryID %in% TerminalFisheriesList & MortTab$RunYear == TAMMRow$year[1])
-              
+
                   #Lumps together FW Sport and Net catches into the first row that has a terminal fishery
                   #FW net and sport are combined in table 3 so no need to differentiate between the two
                   MortTab$TotMort[TermFishLocations[1]] <- as.numeric(PostTAMMDF[37,TAMMLocation]) + as.numeric(PostTAMMDF[38,TAMMLocation])
 
-                  if(CoastalStockList[i] == "Grays Harbor"){
+                  if(CoastalStockListPost[j] == "Grays Harbor"){
                     MortTab$TotMort[TermFishLocations[1]] <- MortTab$TotMort[TermFishLocations[1]] + as.numeric(PostTAMMDF[36,TAMMLocation])
                   }
-              
+
                   #Finds the location in PostEscTab of the given stock
                   EscLocations <- which(EscTab$StockID %in% CoastalFRAMStks & EscTab$RunYear == TAMMRow$year[1])
-               
+
                   #Adds in Escapement, like the above, it just sticks it into the first slot if there are multiple stocks
                   EscTab$Escapement[EscLocations[1]] <- as.numeric(PostTAMMDF[47,TAMMLocation])
                }
               }
-            }
+           }
           }
-          
+
           #make them global variables for use in the F Tables
           MortTab <<- MortTab
-          EscTab <<- EscTab  
+          EscTab <<- EscTab
           
        })
-       
+
        withProgress(message = 'Processing Data/Preparing figures', value = 0, {
           incProgress(1/5, detail = "Processing Data")
           #This is the main processing loop (gets escapements, cohorts, fishery mortality by stock)
           for(i in 1:length(StockList)){
-         
-         
+
+
             # Subsets the stock DF to get the stock of interest
             SubStockDF <- subset(StockDF, StockName == StockList[i])
-         
+
             #Fram stock list
             FRAMStks <- unique(SubStockDF$FRAMWildStocks)
-         
+
             # Subsets escapement DF to get the stock of interest
             SubEscDF <- subset(EscTab, StockID %in% FRAMStks)
-         
+
             StockEscRows <- ddply(SubEscDF, "RunYear",  numcolwise(sum))
-         
+
             StockEscRows$Stock <- StockList[i]
-         
+
             MainEscDF <- rbind(MainEscDF, StockEscRows)
-         
-         
+
+
             # Subsets Mortality DF to get the stock of interest
             SubMortDF <- subset(MortTab, StockID %in% FRAMStks)
-         
+
             StockMortRows <- ddply(SubMortDF, "RunYear",  numcolwise(sum))
             StockMortRows$Stock <- StockList[i]
-            
+
             #Subsets Mortality DF to get stock/only SUS fisheries
             SubMortDFSUS <- subset(MortTab, StockID %in% FRAMStks & as.numeric(FisheryID) < 167)
-            
+
             #Gets the column number with mortalities in it, renames it to SUS Mort
             ColIndex <- which( colnames(SubMortDFSUS)=="TotMort" )
             colnames(SubMortDFSUS)[ColIndex] <- "SUSMort"
-            
+
             #Sums everything by run year
             StockMortSUSRows <- ddply(SubMortDFSUS, "RunYear",  numcolwise(sum))
-            
+
             #Finds out years with 0s; add row so a zero gets merged in later
             for (j in YearList[1]:YearList[length(YearList)]){
               if(!(j %in% StockMortSUSRows$RunYear)){
@@ -556,16 +792,16 @@ function(input, output, session){
                 StockMortSUSRows <- rbind(StockMortSUSRows, newrow)
               }
             }
-            
+
             #Subsets Mortality DF to get stock/only CA fisheries
             SubMortDFCA <- subset(MortTab, StockID %in% FRAMStks & as.numeric(FisheryID) > 166 & as.numeric(FisheryID) < 194)
-            
+
             #Gets the column number with mortalities in it, renames it to CA Mort
             ColIndex <- which( colnames(SubMortDFCA)=="TotMort" )
             colnames(SubMortDFCA)[ColIndex] <- "CAMort"
-            
+
             StockMortCARows <- ddply(SubMortDFCA, "RunYear",  numcolwise(sum))
-            
+
             #Finds out years with 0s; add row so a zero gets merged in later
             for (j in YearList[1]:YearList[length(YearList)]){
               if(!(j %in% StockMortCARows$RunYear)){
@@ -573,16 +809,16 @@ function(input, output, session){
                 StockMortCARows <- rbind(StockMortCARows, newrow)
               }
             }
-            
+
             #Subsets Mortality DF to get stock/only AK fisheries
             SubMortDFAK <- subset(MortTab, StockID %in% FRAMStks & as.numeric(FisheryID) > 193)
-            
+
             #Gets the column number with mortalities in it, renames it to CA Mort
             ColIndex <- which( colnames(SubMortDFAK)=="TotMort" )
             colnames(SubMortDFAK)[ColIndex] <- "AKMort"
-            
+
             StockMortAKRows <- ddply(SubMortDFAK, "RunYear",  numcolwise(sum))
-            
+
             #Finds out years with 0s; add row so a zero gets merged in later
             for (j in YearList[1]:YearList[length(YearList)]){
               if(!(j %in% StockMortAKRows$RunYear)){
@@ -590,17 +826,17 @@ function(input, output, session){
                 StockMortAKRows <- rbind(StockMortAKRows, newrow)
               }
             }
-            
+
             #Merge in SUS,CA, AK
             StockMortRows <- merge(StockMortRows, StockMortSUSRows, by= "RunYear")
             StockMortRows <- merge(StockMortRows, StockMortCARows, by= "RunYear")
             StockMortRows <- merge(StockMortRows, StockMortAKRows, by= "RunYear")
-            
-         
+
+
             MainMortDF <- rbind(MainMortDF, StockMortRows)
-            
-            
-            
+
+
+
             if(SubStockDF$MU[1] == "US Inside"){
               tab41Row <- data.frame(Management.Unit = SubStockDF$StockName[1], Low.Moderate.Abundance.Category = SubStockDF$LAC[1], Moderate.Abundant.Abundance.Category = SubStockDF$UAC[1])
               Tab41DF <<- rbind(Tab41DF, tab41Row)
@@ -612,45 +848,45 @@ function(input, output, session){
               else{
                 ESCGoal = paste(SubStockDF$LEG[1],"-", SubStockDF$UEG[1])
               }
-              
-              tab42Row <- data.frame(Management.Unit = SubStockDF$StockName[1],Escapement.Goal.Range = ESCGoal, 
+
+              tab42Row <- data.frame(Management.Unit = SubStockDF$StockName[1],Escapement.Goal.Range = ESCGoal,
                                      Low.Moderate.Abundance.Category = SubStockDF$LAC[1], Moderate.Abundant.Abundance.Category = SubStockDF$UAC[1])
               Tab42DF <<- rbind(Tab42DF, tab42Row)
             }
-            
-            
-            
-            
-            
-            
+
+
+
+
+
+
             ###################Pre season######################################
-            
+
             # Subsets escapement DF to get the stock of interest
             PreSubEscDF <- subset(PreEscTab, StockID %in% FRAMStks)
-            
+
             PreStockEscRows <- ddply(PreSubEscDF, "RunYear",  numcolwise(sum))
-            
+
             PreStockEscRows$Stock <- StockList[i]
-            
+
             PreMainEscDF <- rbind(PreMainEscDF, PreStockEscRows)
-            
-            
+
+
             # Subsets Mortality DF to get the stock of interest
             PreSubMortDF <- subset(PreMortTab, StockID %in% FRAMStks)
-            
+
             PreStockMortRows <- ddply(PreSubMortDF, "RunYear",  numcolwise(sum))
             PreStockMortRows$Stock <- StockList[i]
-            
+
             #Subsets Mortality DF to get stock/only SUS fisheries
             PreSubMortDFSUS <- subset(PreMortTab, StockID %in% FRAMStks & as.numeric(FisheryID) < 167)
-            
+
             #Gets the column number with mortalities in it, renames it to SUS Mort
             ColIndex <- which(colnames(PreSubMortDFSUS)=="TotMort" )
             colnames(PreSubMortDFSUS)[ColIndex] <- "SUSMort"
-            
+
             #Sums everything by run year
             PreStockMortSUSRows <- ddply(PreSubMortDFSUS, "RunYear",  numcolwise(sum))
-            
+
             #Finds out years with 0s; add row so a zero gets merged in later
             for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
               if(!(j %in% PreStockMortSUSRows$RunYear)){
@@ -658,16 +894,16 @@ function(input, output, session){
                 PreStockMortSUSRows <- rbind(PreStockMortSUSRows, newrow)
               }
             }
-            
+
             #Subsets Mortality DF to get stock/only CA fisheries
             PreSubMortDFCA <- subset(PreMortTab, StockID %in% FRAMStks & as.numeric(FisheryID) > 166 & as.numeric(FisheryID) < 194)
-            
+
             #Gets the column number with mortalities in it, renames it to CA Mort
             ColIndex <- which(colnames(PreSubMortDFCA)=="TotMort" )
             colnames(PreSubMortDFCA)[ColIndex] <- "CAMort"
-            
+
             PreStockMortCARows <- ddply(PreSubMortDFCA, "RunYear",  numcolwise(sum))
-            
+
             #Finds out years with 0s; add row so a zero gets merged in later
             for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
               if(!(j %in% PreStockMortCARows$RunYear)){
@@ -675,16 +911,16 @@ function(input, output, session){
                 PreStockMortCARows <- rbind(PreStockMortCARows, newrow)
               }
             }
-            
+
             #Subsets Mortality DF to get stock/only AK fisheries
             PreSubMortDFAK <- subset(PreMortTab, StockID %in% FRAMStks & as.numeric(FisheryID) > 193)
-            
+
             #Gets the column number with mortalities in it, renames it to CA Mort
             ColIndex <- which(colnames(PreSubMortDFAK)=="TotMort" )
             colnames(PreSubMortDFAK)[ColIndex] <- "AKMort"
-            
+
             PreStockMortAKRows <- ddply(PreSubMortDFAK, "RunYear",  numcolwise(sum))
-            
+
             #Finds out years with 0s; add row so a zero gets merged in later
             for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
               if(!(j %in% PreStockMortAKRows$RunYear)){
@@ -692,40 +928,40 @@ function(input, output, session){
                 PreStockMortAKRows <- rbind(PreStockMortAKRows, newrow)
               }
             }
-            
+
             #Merge in SUS,CA, AK
             PreStockMortRows <- merge(PreStockMortRows, PreStockMortSUSRows, by= "RunYear")
             PreStockMortRows <- merge(PreStockMortRows, PreStockMortCARows, by= "RunYear")
             PreStockMortRows <- merge(PreStockMortRows, PreStockMortAKRows, by= "RunYear")
-            
-            
+
+
             PreMainMortDF <- rbind(PreMainMortDF, PreStockMortRows)
-         
-         
+
+
           }
-       
+
           #Merging data frames
           MainDataDF <<- merge(MainEscDF, MainMortDF, by= c("Stock","RunYear"))
-       
+
           #Ocean Cohort = Escapement + Mortality
           MainDataDF$OceanCohort <<- MainDataDF$Escapement + MainDataDF$TotMort
-          
+
           #Merging data frames
           PreMainDataDF <<- merge(PreMainEscDF, PreMainMortDF, by= c("Stock","RunYear"))
-          
+
           #Ocean Cohort = Escapement + Mortality
           PreMainDataDF$OceanCohort <<- PreMainDataDF$Escapement + PreMainDataDF$TotMort
-          
+
           #To get abundance objectives, gets only unique rows for columns 3 to 11
           StockDFOBJ <- unique(StockDF[,3:11])
-          
+
           StockDFOBJ$Stock <- StockDFOBJ$StockName
-          
+
           PreMainDataDF <<- merge(PreMainDataDF, StockDFOBJ, by = "Stock")
-          
+
           #Gets the abundance category
           PreMainDataDF$PreAbund <<- NA
-          
+
           for (i in 1:nrow(PreMainDataDF)){
             if(PreMainDataDF$Cap.Meth[i] == "None"){
               #do nothing - just makes sure that the loop isn't failing as it checks NAs
@@ -746,16 +982,16 @@ function(input, output, session){
               PreMainDataDF$PreAbund[i] <<- "(L)"
             }
           }
-          
+
           #Gets rid of all the useless columns
           DFDrops <- c("StockName", "LAC", "UAC", "Cap.Meth", "LAMO", "MAMO", "AAMO", "LEG", "UEG", "MU")
           PreMainDataDF<<- PreMainDataDF[ , !(names(PreMainDataDF) %in% DFDrops)]
-          
-          
-          
-          
+
+
+
+
           MainDataDF <<- merge(MainDataDF, StockDFOBJ, by = "Stock")
-          
+
           #Gets the abundance category
           MainDataDF$PostAbund <<- NA
 
@@ -783,25 +1019,25 @@ function(input, output, session){
 
           #Gets rid of all the useless columns
           MainDataDF<<- MainDataDF[ , !(names(MainDataDF) %in% DFDrops)]
-          
-       
+
+
           #Ocean Cohort Figures (4.1, 4.2, 4.3)
           incProgress(2/5, detail = "Preparing figures 4.1 to 4.3")
-       
+
           for (i in 1:3){
             if (i == 1){
               FigStocks <- c("Lower Fraser", "Interior Fraser", "Georgia Strait ML", "Georgia Strait VI")
-           
+
               FigName <- "Figure 4.1.jpg"
-           
+
               FigDF <- subset(MainDataDF, Stock %in% FigStocks)
-           
+
               #Excludes 1998-2003 from the figure
               FigDF$OceanCohort[FigDF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
-           
+
               FigDF$OceanCohortThous <- FigDF$OceanCohort/1000
-              
-              
+
+
               #This automates finding the max Y scale to use... as well as the breaks for the Y axis
               #First find the max Y value; exclude NAs
               FigMaxY <- max(subset(FigDF$OceanCohortThous, is.na(FigDF$OceanCohortThous) == FALSE))
@@ -815,7 +1051,7 @@ function(input, output, session){
               for(b in 2:BreakNum){
                 breaklist <- c(breaklist, b*100)
               }
-              
+
               Fig41 <<- ggplot(FigDF, aes(x=RunYear, y = OceanCohortThous, group = Stock, linetype = Stock, colour = Stock, size = Stock))+
                 geom_line() + theme_classic()+
                 #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
@@ -828,23 +1064,23 @@ function(input, output, session){
                 theme(axis.text.x = element_text(angle = 90, hjust = 1))+
                 guides(colour = guide_legend(override.aes = list(size=.6)))+
                 scale_y_continuous(expand = c(0,0), limits = c(0, FigMaxY), breaks = breaklist)+geom_hline(yintercept = breaklist)
-              
-           
+
+
               filePath <- file.path(tempdir(), FigName)
               ggsave(Fig41, file = filePath, width = 12, height = 6)
-           
+
               drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Figures/")
-           
+
             }
             if (i == 2){
               FigStocks <- c("Skagit", "Stillaguamish", "Snohomish", "Hood Canal", "US Strait JDF")
-           
+
               FigName <- "Figure 4.2.jpg"
-           
+
               FigDF <- subset(MainDataDF, Stock %in% FigStocks)
-           
+
               FigDF$OceanCohortThous <- FigDF$OceanCohort/1000
-              
+
               #This automates finding the max Y scale to use... as well as the breaks for the Y axis
               #First find the max Y value; exclude NAs
               FigMaxY <- max(subset(FigDF$OceanCohortThous, is.na(FigDF$OceanCohortThous) == FALSE))
@@ -858,7 +1094,7 @@ function(input, output, session){
               for(b in 2:BreakNum){
                 breaklist <- c(breaklist, b*50)
               }
-           
+
               Fig42 <<- ggplot(FigDF, aes(x=RunYear, y = OceanCohortThous, group = Stock, linetype = Stock, colour = Stock, size = Stock))+
                 geom_line() + theme_classic()+
                 #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
@@ -871,21 +1107,21 @@ function(input, output, session){
                 theme(axis.text.x = element_text(angle = 90, hjust = 1))+
                 guides(colour = guide_legend(override.aes = list(size=.6)))+
                 scale_y_continuous(expand = c(0,0), limits = c(0, FigMaxY), breaks = breaklist) + geom_hline(yintercept = breaklist)
-           
+
               filePath <- file.path(tempdir(), FigName)
               ggsave(Fig42, file = filePath, width = 12, height = 6)
-           
+
               drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Figures/")
             }
             if (i == 3){
               FigStocks <- c("Quillayute", "Hoh", "Queets", "Grays Harbor")
-           
+
               FigName <- "Figure 4.3.jpg"
-           
+
               FigDF <- subset(MainDataDF, Stock %in% FigStocks)
-           
+
               FigDF$OceanCohortThous <- FigDF$OceanCohort/1000
-              
+
               #This automates finding the max Y scale to use... as well as the breaks for the Y axis
               #First find the max Y value; exclude NAs
               FigMaxY <- max(subset(FigDF$OceanCohortThous, is.na(FigDF$OceanCohortThous) == FALSE))
@@ -899,7 +1135,7 @@ function(input, output, session){
               for(b in 2:BreakNum){
                 breaklist <- c(breaklist, b*20)
               }
-           
+
               Fig43 <<- ggplot(FigDF, aes(x=RunYear, y = OceanCohortThous, group = Stock, linetype = Stock, colour = Stock, size = Stock))+
                 geom_line() + theme_classic()+
                 #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
@@ -912,23 +1148,23 @@ function(input, output, session){
                 theme(axis.text.x = element_text(angle = 90, hjust = 1))+
                 guides(colour = guide_legend(override.aes = list(size=.6)))+
                 scale_y_continuous(expand = c(0,0), limits = c(0, FigMaxY), breaks = breaklist) + geom_hline(yintercept = breaklist)
-           
+
               filePath <- file.path(tempdir(), FigName)
               ggsave(Fig43, file = filePath, width = 12, height = 6)
-           
+
               drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Figures/")
             }
           }
-          
+
           incProgress(3/5, detail = "Preparing figure 5.1")
-          
+
           #Preparing figure 5.1 (total fishery mortality of all management units combined, by CA and US)
           Fig51DF <- ddply(MainDataDF, "RunYear",  numcolwise(sum))
           Fig51DF$USMort <- Fig51DF$SUSMort + Fig51DF$AKMort
 
           #Reorganizes the data for plotting
           Fig51DF <- melt(Fig51DF, id.vars = "RunYear", measure.vars = c("CAMort", "USMort"))
-          
+
           #First find the max Y value; exclude NAs
           FigMaxY <- max(subset(Fig51DF$value, is.na(Fig51DF$value) == FALSE))/1000000
           #Next round up to the nearest 20, then increase by 20, just to ensure that there is sufficient room
@@ -957,8 +1193,8 @@ function(input, output, session){
           ggsave(Fig51, file = filePath, width = 12, height = 6)
 
           drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Figures/")
-          
-         
+
+
           incProgress(4/5, detail = "Preparing figures 7.1 to 7.13")
           #DF used to set up figure orders
           OrdRow1 <- data.frame(name = "Fig71", Stock = "Lower Fraser", order = 1)
@@ -974,45 +1210,45 @@ function(input, output, session){
           OrdRow11 <- data.frame(name = "Fig711", Stock = "Hoh", order = 11)
           OrdRow12 <- data.frame(name = "Fig712", Stock = "Queets", order = 12)
           OrdRow13 <- data.frame(name = "Fig713", Stock = "Grays Harbor", order = 13)
-          
-          
+
+
           OrderDF <<- rbind(OrdRow1,OrdRow2,OrdRow3,OrdRow4,OrdRow5,OrdRow6,OrdRow7,OrdRow8,OrdRow9,OrdRow10,OrdRow11,OrdRow12,OrdRow13)
-          
+
           #Figures 7.1-7.13
           for (i in 1:length(StockList)){
             #Switching to local solves issues with assign; you also have to do i <-i and pos =1 in the assign function for this to work
             local ({
-              
+
               i <- i
               #Gets figure name from the order df
               Figname <- as.character(subset(OrderDF, Stock == StockList[i])[1,1])
-              
+
               Fig7DF <- subset(MainDataDF, Stock == StockList[i])
-              
-              #if in a Canadian stock, do not include 1998-2003, 
+
+              #if in a Canadian stock, do not include 1998-2003,
               if (StockList[i] == "Lower Fraser" | StockList[i] == "Interior Fraser" | StockList[i] == "Georgia Strait ML" | StockList[i] == "Georgia Strait VI"){
                 Fig7DF$Escapement[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
                 Fig7DF$CAMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
                 Fig7DF$SUSMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
                 Fig7DF$AKMort[Fig7DF$RunYear %in% c("1998","1999","2000","2001","2002","2003")] <- NA
               }
-              
+
               #Get morts in terms of ER
               Fig7DF$USER <- (Fig7DF$SUSMort + Fig7DF$AKMort)/Fig7DF$OceanCohort
               Fig7DF$CAER <- Fig7DF$CAMort/Fig7DF$OceanCohort
-              
+
               #Combine the datasets into a usable format for stacked barplots
               Melted7DF <- melt(Fig7DF, id.vars = "RunYear", measure.vars = c("CAER", "USER"))
-              
+
               #DF with just escapements
               Fig7Esc <- Fig7DF[ , (names(Fig7DF) %in% c("RunYear", "Escapement"))]
-              
+
               #adds in escapements to the DF
               Melted7DF <- merge(Melted7DF, Fig7Esc , by= "RunYear")
-              
+
               #Gets readjustment scale
               maxy <- sort(Fig7Esc$Escapement, decreasing = TRUE)[1] +500
-              
+
               #Find the number of breaks to use
               #For the purposes of automating, lets make the secondary axis 8 breaks
               BreakDelineations <- maxy/8
@@ -1022,7 +1258,7 @@ function(input, output, session){
               for(b in 2:8){
                 breaklist <- c(breaklist, b*BreakDelineations)
               }
-              
+
               #create variable name for later use
               assign(Figname, ggplot(Melted7DF, aes(x = RunYear, y = value, fill = variable))+
                        geom_hline(yintercept = c(0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1)) +
@@ -1038,8 +1274,8 @@ function(input, output, session){
                        scale_y_continuous(expand = c(0,0), lim = c(0,1),breaks = c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1),sec.axis = sec_axis(~.*(BreakDelineations*8), name = "Escapement", breaks = breaklist))+
                        #Escapements must get rescaled to match axes
                        geom_line(aes(y = Escapement/maxy), group = 1, size = 1.2) + ggtitle(StockList[i]), envir = .GlobalEnv, pos = 1)
-              
-              
+
+
               # save file for dropbox
               filePath <- file.path(tempdir(), paste(Figname,".jpg",sep=""))
               ggsave(ggplot(Melted7DF, aes(x = RunYear, y = value, fill = variable))+
@@ -1057,12 +1293,12 @@ function(input, output, session){
                        #Escapements must get rescaled to match axes
                        geom_line(aes(y = Escapement/maxy), group = 1, size = 1.2), file = filePath, width = 12, height = 6)
 
-              
+
               drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Figures/")
             })
           }
-          
-          
+
+
           #This section sets up run information for the user
           #It includes a run date and time
           #information on who ran it (if an email is supplied)
@@ -1087,22 +1323,22 @@ function(input, output, session){
             #Stitch it all back together
             RunTime <- paste(substr(as.character(Sys.time()),1,8), NewDay, " ", NewHour, substr(as.character(Sys.time()),14,19), sep = "")
           }
-          
+
           if(input$EmailAdd == ""){
             RunBy <- "User did not specify email address prior to running"
           }
           else{
             RunBy <- input$EmailAdd
           }
-          
+
           RunInfo <<- data.frame(runname = c("",paste("Run Time: ", RunTime, sep = ""), paste("Run By: ", RunBy, sep = ""), paste("TAMM option: ", input$TAMMAdd, sep = "")))
-          
-          
+
+
           incProgress(5/5, detail = "Tables")
           #tables
           #Options added - can be changed to Latex but not PDF
-          options(knitr.table.format = "html") 
-          
+          options(knitr.table.format = "html")
+
           #Rename column headers
           ColIndex <- which(colnames(Tab41DF)=="Management.Unit" )
           colnames(Tab41DF)[ColIndex] <- "Management Unit"
@@ -1110,13 +1346,13 @@ function(input, output, session){
           colnames(Tab41DF)[ColIndex] <- "Low/Moderate"
           ColIndex <- which(colnames(Tab41DF)=="Moderate.Abundant.Abundance.Category" )
           colnames(Tab41DF)[ColIndex] <- "Moderate/Abundant"
-          
+
           Tab41DFhtml <- kable (Tab41DF) %>%
             kable_styling("bordered") %>%
             #add header rows
             add_header_above(c(" ", "Abundance Category Breakpoints" = 2), bold = T)
-          
-          
+
+
           ColIndex <- which(colnames(Tab42DF)=="Management.Unit" )
           colnames(Tab42DF)[ColIndex] <- "Management Unit"
           ColIndex <- which(colnames(Tab42DF)=="Escapement.Goal.Range" )
@@ -1125,68 +1361,68 @@ function(input, output, session){
           colnames(Tab42DF)[ColIndex] <- "Low/Moderate"
           ColIndex <- which(colnames(Tab42DF)=="Moderate.Abundant.Abundance.Category" )
           colnames(Tab42DF)[ColIndex] <- "Moderate/Abundant"
-          
+
           Tab42DFhtml <- kable (Tab42DF) %>%
             kable_styling("bordered") %>%
             #add header rows
             add_header_above(c(" ", " ", "Abundance Category Breakpoints" = 2), bold = T)
-          
+
           #upload tables 4.1, 4.2 as HTML
           filePath <- file.path(tempdir(), "Table 4.1 html.txt")
           writeLines(Tab41DFhtml,filePath)
-          
+
           drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
-          
+
           filePath <- file.path(tempdir(), "Table 4.2 html.txt")
           writeLines(Tab42DFhtml,filePath)
-          
+
           drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
-          
-          
+
+
           #Get Run Info into CSVs
           TabRunInfo <- RunInfo
-          
+
           #This adds in empty columns - the DFs being combined need to have the same number of columns
           # It adds in 4 blank rows.
           for (y in 2:ncol(Tab41DF)){
             EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
             TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
           }
-          
+
           #This makes the column names match up so that we can combine DFs
           for (y in 1:ncol(Tab41DF)){
             names(TabRunInfo)[y] <- colnames (Tab41DF)[y]
           }
-          
+
           #upload tables 4.1 as csv, include RunInfo table
           filePath <- file.path(tempdir(), "Table 4.1.csv")
           write.csv(rbind(Tab41DF,TabRunInfo),filePath)
-          
+
           drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
-          
+
           TabRunInfo <- RunInfo
-          
+
           #This adds in empty columns - the DFs being combined need to have the same number of columns
           # It adds in 4 blank rows.
           for (y in 2:ncol(Tab42DF)){
             EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
             TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
           }
-          
+
           #This makes the column names match up so that we can combine DFs
           for (y in 1:ncol(Tab42DF)){
             names(TabRunInfo)[y] <- colnames (Tab42DF)[y]
           }
-          
+
           filePath <- file.path(tempdir(), "Table 4.2.csv")
           write.csv(rbind(Tab42DF,TabRunInfo),filePath)
-          
+
           drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
-          
-          
-          
-          
-          
+
+
+
+
+
           # #########Table 6 and table 8
 
           #Only pre-season data from 2004 onward
@@ -1268,24 +1504,24 @@ function(input, output, session){
             collapse_rows(columns = 1)%>%
             #add header row
             add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
-          
+
           Tab62DF <<- subset(Tab6DF, Stock %in% c("Skagit", "Stillaguamish", "Snohomish", "Hood Canal", "US Strait JDF"))
-          
+
           ColIndex <- which(colnames(Tab62DF)=="Stock" )
           colnames(Tab62DF)[ColIndex] <<- "Management Unit"
-          
+
           Tab62DFhtml <- kable (Tab62DF, row.names = FALSE) %>%
             kable_styling("bordered") %>%
             #group columns by stock
             collapse_rows(columns = 1)%>%
             #add header row
             add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
-          
+
           Tab63DF <<- subset(Tab6DF, Stock %in% c("Quillayute", "Hoh", "Queets", "Grays Harbor"))
-          
+
           ColIndex <- which(colnames(Tab63DF)=="Stock" )
           colnames(Tab63DF)[ColIndex] <<- "Management Unit"
-          
+
           Tab63DFhtml <- kable (Tab63DF, row.names = FALSE) %>%
             kable_styling("bordered") %>%
             #group columns by stock
@@ -1296,80 +1532,80 @@ function(input, output, session){
           #upload tables 6.1, 6.2, 6.3
           filePath <- file.path(tempdir(), "Table 6.1 html.txt")
           writeLines(Tab61DFhtml,filePath)
-          
+
           filePath2 <- file.path(tempdir(), "Table 6.2 html.txt")
           writeLines(Tab62DFhtml,filePath2)
-          
+
           filePath3 <- file.path(tempdir(), "Table 6.3 html.txt")
           writeLines(Tab63DFhtml,filePath3)
 
           drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
           drop_upload(filePath2, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
           drop_upload(filePath3, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
-          
+
           #Now do these tables as CSVs
-          
+
           TabRunInfo <- RunInfo
-          
+
           #This adds in empty columns - the DFs being combined need to have the same number of columns
           # It adds in 4 blank rows.
           for (y in 2:ncol(Tab61DF)){
             EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
             TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
           }
-          
+
           #This makes the column names match up so that we can combine DFs
           for (y in 1:ncol(Tab61DF)){
             names(TabRunInfo)[y] <- colnames (Tab61DF)[y]
           }
-          
+
           filePath <- file.path(tempdir(), "Table 6.1.csv")
           write.csv(rbind(Tab61DF,TabRunInfo),filePath)
-          
+
           drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
-          
+
           TabRunInfo <- RunInfo
-          
+
           #This adds in empty columns - the DFs being combined need to have the same number of columns
           # It adds in 4 blank rows.
           for (y in 2:ncol(Tab62DF)){
             EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
             TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
           }
-          
+
           #This makes the column names match up so that we can combine DFs
           for (y in 1:ncol(Tab62DF)){
             names(TabRunInfo)[y] <- colnames (Tab62DF)[y]
           }
-          
+
           filePath <- file.path(tempdir(), "Table 6.2.csv")
           write.csv(rbind(Tab62DF,TabRunInfo),filePath)
-          
+
           drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
-          
+
           TabRunInfo <- RunInfo
-          
+
           #This adds in empty columns - the DFs being combined need to have the same number of columns
           # It adds in 4 blank rows.
           for (y in 2:ncol(Tab63DF)){
             EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
             TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
           }
-          
+
           #This makes the column names match up so that we can combine DFs
           for (y in 1:ncol(Tab63DF)){
             names(TabRunInfo)[y] <- colnames (Tab63DF)[y]
           }
-          
+
           filePath <- file.path(tempdir(), "Table 6.3.csv")
           write.csv(rbind(Tab63DF,TabRunInfo),filePath)
-          
+
           drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
-          
-          
-          
+
+
+
           #Prepare Table 9
-          
+
           USHatcheryMarkedStocks <- c(4,6,8,10,16,20,22,26,28,32,34,38,40,42,48,50,54,58,66,68,72,74,78,80,84,88,
                                       92,96,100,104,110,114,120,126,130,134,138,142,144,148,152,
                                       156,160,164,166,168,176,178,182,186,190,192,194,198,202)
@@ -1378,109 +1614,109 @@ function(input, output, session){
                                         155,159,163,165,167,175,177,181,185,189,191,193,197,201)
           CAHatcheryMarkedStocks <- c(206,210,214,218,222,226,230)
           CAHatcheryUnmarkedStocks <- c(205,209,213,217,221,225,229)
-          
+
           #Subsets Mortality DF to get US Hat Marked in CA fisheries
           Tab9DFUSMarked <- subset(MortTab, StockID %in% USHatcheryMarkedStocks & FisheryID > 166 & FisheryID < 193)
-          
+
           Tab9DFUSMarked <- ddply(Tab9DFUSMarked, "RunYear",  numcolwise(sum))
-          
+
           Tab9DFUSMarked$TotMort <- round(Tab9DFUSMarked$TotMort, digits = 0)
-          
-          #Gets the column number with mortalities in it, renames it 
+
+          #Gets the column number with mortalities in it, renames it
           ColIndex <- which(colnames(Tab9DFUSMarked)=="TotMort" )
           colnames(Tab9DFUSMarked)[ColIndex] <- "CA Catch of US Marked"
-          
-          
-          
+
+
+
           #US UM
-          
+
           Tab9DFUSUM <- subset(MortTab, StockID %in% USHatcheryUnmarkedStocks & FisheryID > 166 & FisheryID < 193)
-          
+
           Tab9DFUSUM <- ddply(Tab9DFUSUM, "RunYear",  numcolwise(sum))
-          
+
           Tab9DFUSUM$TotMort <- round(Tab9DFUSUM$TotMort, digits = 0)
-          
+
           ColIndex <- which(colnames(Tab9DFUSUM)=="TotMort" )
           colnames(Tab9DFUSUM)[ColIndex] <- "CA Catch of US Unmarked"
-          
-          
-          
+
+
+
           #CA M
-          
+
           Tab9DFCAMarked <- subset(MortTab, StockID %in% CAHatcheryMarkedStocks & (FisheryID < 167 | FisheryID > 193))
-          
+
           Tab9DFCAMarked <- ddply(Tab9DFCAMarked, "RunYear",  numcolwise(sum))
-          
+
           Tab9DFCAMarked$TotMort <- round(Tab9DFCAMarked$TotMort, digits = 0)
-          
+
           ColIndex <- which(colnames(Tab9DFCAMarked)=="TotMort" )
           colnames(Tab9DFCAMarked)[ColIndex] <- "US Catch of CA Marked"
-          
-          
-          
+
+
+
           #CA UM
           Tab9DFCAUM <- subset(MortTab, StockID %in% CAHatcheryUnmarkedStocks & (FisheryID < 167 | FisheryID > 193))
-          
+
           Tab9DFCAUM <- ddply(Tab9DFCAUM, "RunYear",  numcolwise(sum))
-          
+
           Tab9DFCAUM$TotMort <- round(Tab9DFCAUM$TotMort, digits = 0)
-          
+
           ColIndex <- which(colnames(Tab9DFCAUM)=="TotMort" )
           colnames(Tab9DFCAUM)[ColIndex] <- "US Catch of CA Unmarked"
-          
+
           #Merges DFs to a single table
           Tab9 <- merge(Tab9DFCAMarked, Tab9DFCAUM, by= "RunYear")
           Tab9 <- merge(Tab9, Tab9DFUSMarked, by= "RunYear")
           Tab9 <- merge(Tab9, Tab9DFUSUM, by= "RunYear")
-          
+
           ColIndex <- which(colnames(Tab9)=="RunYear" )
           colnames(Tab9)[ColIndex] <- "Year"
-          
+
           Tab9 <<- Tab9
-          
-          
+
+
           TabRunInfo <- RunInfo
-          
+
           #This adds in empty columns - the DFs being combined need to have the same number of columns
           # It adds in 4 blank rows.
           for (y in 2:ncol(Tab9)){
             EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
             TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
           }
-          
+
           #This makes the column names match up so that we can combine DFs
           for (y in 1:ncol(Tab9)){
             names(TabRunInfo)[y] <- colnames (Tab9)[y]
           }
-          
+
           filePath <- file.path(tempdir(), "Table 9.csv")
           write.csv(rbind(Tab9,TabRunInfo),filePath)
-          
+
           drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
-          
-          
+
+
           #Appendix E
-          
+
           for (i in 1:length(StockList)){
             #Switching to local solves issues with assign; you also have to do i <-i and pos =1 in the assign function for this to work
             local ({
-              
+
               i <- i
-              
+
               #Gets table name from the order df
               Tabname <- paste("TableE",as.character(subset(OrderDF, Stock == StockList[i])[1,3]), sep="")
-              
+
               TabEDF <- subset(MainDataDF, Stock == StockList[i])
-              
+
               TabEDF$Total <- paste(round(TabEDF$TotMort/TabEDF$OceanCohort, digits = 3)*100, "%", sep="")
               TabEDF$USTot <- paste(round((TabEDF$SUSMort+TabEDF$AKMort)/TabEDF$OceanCohort, digits = 3)*100, "%", sep="")
               TabEDF$CanTot <- paste(round(TabEDF$CAMort/TabEDF$OceanCohort, digits = 3)*100, "%", sep="")
               TabEDF$EscRounded <- round(TabEDF$Escapement, digits = 0)
-              
+
               KeepCols <- c("RunYear","Total", "USTot", "CanTot", "EscRounded")
-              
+
               TabEDF <- TabEDF[ , (names(TabEDF) %in% KeepCols)]
-              
+
               ColIndex <- which(colnames(TabEDF)=="RunYear" )
               colnames(TabEDF)[ColIndex] <- "Catch Year"
               ColIndex <- which(colnames(TabEDF)=="USTot" )
@@ -1489,34 +1725,34 @@ function(input, output, session){
               colnames(TabEDF)[ColIndex] <- "Can Tot"
               ColIndex <- which(colnames(TabEDF)=="EscRounded" )
               colnames(TabEDF)[ColIndex] <- "Escapement"
-              
+
               #create variable name for later use
               assign(Tabname, TabEDF, envir = .GlobalEnv, pos = 1)
-              
+
               TabRunInfo <- RunInfo
-              
+
               #This adds in empty columns - the DFs being combined need to have the same number of columns
               # It adds in 4 blank rows.
               for (y in 2:ncol(TabEDF)){
                 EmptyColumn <- data.frame(EmptyRows = c(" " , " ", " ", " "))
                 TabRunInfo <- cbind(TabRunInfo, EmptyColumn)
               }
-              
+
               #This makes the column names match up so that we can combine DFs
               for (y in 1:ncol(TabEDF)){
                 names(TabRunInfo)[y] <- colnames (TabEDF)[y]
               }
-              
-              
+
+
               filePath <- file.path(tempdir(), paste(Tabname," ",StockList[i],".csv",sep=""))
               write.csv(rbind(TabEDF,TabRunInfo),filePath)
               drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Periodic Report Tables/")
-              
+
             })
           }
-          
-          
-         })
+
+
+          })
        # }
      })
    })
