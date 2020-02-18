@@ -22,6 +22,7 @@ library(later)
 library(pool)
 #library(rsconnect)
 library(readxl)
+library(xlsx)
 
 #options(rsconnect.max.bundle.size=3145728000)
 #options(shiny.maxRequestSize=3145728000)
@@ -45,7 +46,15 @@ shinyServer(
     sidebarPanel(
       
       textInput("PasswordAdd", "Please enter password to access program functions", ""),
-      selectInput("TAMMAdd", "Use TAMM to update coastal stocks/catch?", choice = c("Yes - All Stocks", "Yes - Queets Only", "No")),
+      fileInput("TAMMListInput", "Choose TAMMList file (CSV)", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")    ),
+      fileInput("PostSeasRunIDInput", "Choose Post-Season RunID file (CSV)", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")    ),
+      fileInput("PostSeasEscapementInput", "Choose Post-Season Escapement file (CSV)", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")    ),
+      fileInput("PostSeasMortalityInput", "Choose Post-Season Mortality file (CSV)", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")    ),
+      fileInput("PreSeasRunIDInput", "Choose Pre-Season RunID file (CSV)", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")    ),
+      fileInput("PreSeasEscapementInput", "Choose Pre-Season Escapement file (CSV)", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")    ),
+      fileInput("PreSeasMortalityInput", "Choose Pre-Season Mortality file (CSV)", accept = c("text/csv","text/comma-separated-values,text/plain", ".csv")    ),
+      selectInput("TAMMAddPost", "Post-Season: Use TAMM to update coastal stocks/catch?", choice = c("Yes - All Stocks", "Yes - Queets Only", "No")),
+      selectInput("TAMMAddPre", "Pre-Season: Use TAMM to update coastal stocks/catch?", choice = c("Yes - All Stocks", "Yes - Queets Only", "No")),
       #Adds a dropdown box
       actionButton("DataProcessButton",label = "Process Data/Create Figures & Tables"),
       actionButton("FTableButton",label = "Produce Appendix F Tables"),
