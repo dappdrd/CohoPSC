@@ -7,7 +7,7 @@
 #
 # Contributors: CoTC
 #
-# Last Updated: 12/13/2019 by Derek Dapp
+# Last Updated: 7/1/2020 by Derek Dapp; included the ability to run with blank pre-season files
 ####################################################################################################
 
 #Sets the maximum application memory size to 8100 MB.  This is the maximum that a shiny app can handle.
@@ -488,6 +488,7 @@ function(input, output, session){
           #Grabs FRAM RunID Table
           
           incProgress(1/2, detail = "Loading Post-Season Data - this may take a few minutes")
+          
           TAMMList <- TAMMList.file()
           
           RunIDTab <- PostSeason.RunID.file()
@@ -745,6 +746,10 @@ function(input, output, session){
           MortTab <<- MortTab
           EscTab <<- EscTab
           
+          #This checks to see if we've loaded in blanks for the pre-season, if so, this variable
+          #Will be used to run post-season only information.
+          PostOnly = is.na(PreEscTab$RunID[1])
+          
        })
 
        withProgress(message = 'Processing Data/Preparing figures', value = 0, {
@@ -860,82 +865,86 @@ function(input, output, session){
 
 
             ###################Pre season######################################
-
-            # Subsets escapement DF to get the stock of interest
-            PreSubEscDF <- subset(PreEscTab, StockID %in% FRAMStks)
-
-            PreStockEscRows <- ddply(PreSubEscDF, "RunYear",  numcolwise(sum))
-
-            PreStockEscRows$Stock <- StockList[i]
-
-            PreMainEscDF <- rbind(PreMainEscDF, PreStockEscRows)
-
-
-            # Subsets Mortality DF to get the stock of interest
-            PreSubMortDF <- subset(PreMortTab, StockID %in% FRAMStks)
-
-            PreStockMortRows <- ddply(PreSubMortDF, "RunYear",  numcolwise(sum))
-            PreStockMortRows$Stock <- StockList[i]
-
-            #Subsets Mortality DF to get stock/only SUS fisheries
-            PreSubMortDFSUS <- subset(PreMortTab, StockID %in% FRAMStks & as.numeric(FisheryID) < 167)
-
-            #Gets the column number with mortalities in it, renames it to SUS Mort
-            ColIndex <- which(colnames(PreSubMortDFSUS)=="TotMort" )
-            colnames(PreSubMortDFSUS)[ColIndex] <- "SUSMort"
-
-            #Sums everything by run year
-            PreStockMortSUSRows <- ddply(PreSubMortDFSUS, "RunYear",  numcolwise(sum))
-
-            #Finds out years with 0s; add row so a zero gets merged in later
-            for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
-              if(!(j %in% PreStockMortSUSRows$RunYear)){
-                newrow <- data.frame(RunYear = j, SUSMort = 0)
-                PreStockMortSUSRows <- rbind(PreStockMortSUSRows, newrow)
+            
+            # Only runs this if pre-season files are not blank
+            if(PostOnly == FALSE){
+  
+              # Subsets escapement DF to get the stock of interest
+              PreSubEscDF <- subset(PreEscTab, StockID %in% FRAMStks)
+  
+              PreStockEscRows <- ddply(PreSubEscDF, "RunYear",  numcolwise(sum))
+  
+              PreStockEscRows$Stock <- StockList[i]
+  
+              PreMainEscDF <- rbind(PreMainEscDF, PreStockEscRows)
+  
+  
+              # Subsets Mortality DF to get the stock of interest
+              PreSubMortDF <- subset(PreMortTab, StockID %in% FRAMStks)
+  
+              PreStockMortRows <- ddply(PreSubMortDF, "RunYear",  numcolwise(sum))
+              PreStockMortRows$Stock <- StockList[i]
+  
+              #Subsets Mortality DF to get stock/only SUS fisheries
+              PreSubMortDFSUS <- subset(PreMortTab, StockID %in% FRAMStks & as.numeric(FisheryID) < 167)
+  
+              #Gets the column number with mortalities in it, renames it to SUS Mort
+              ColIndex <- which(colnames(PreSubMortDFSUS)=="TotMort" )
+              colnames(PreSubMortDFSUS)[ColIndex] <- "SUSMort"
+  
+              #Sums everything by run year
+              PreStockMortSUSRows <- ddply(PreSubMortDFSUS, "RunYear",  numcolwise(sum))
+  
+              #Finds out years with 0s; add row so a zero gets merged in later
+              for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
+                if(!(j %in% PreStockMortSUSRows$RunYear)){
+                  newrow <- data.frame(RunYear = j, SUSMort = 0)
+                  PreStockMortSUSRows <- rbind(PreStockMortSUSRows, newrow)
+                }
               }
-            }
-
-            #Subsets Mortality DF to get stock/only CA fisheries
-            PreSubMortDFCA <- subset(PreMortTab, StockID %in% FRAMStks & as.numeric(FisheryID) > 166 & as.numeric(FisheryID) < 194)
-
-            #Gets the column number with mortalities in it, renames it to CA Mort
-            ColIndex <- which(colnames(PreSubMortDFCA)=="TotMort" )
-            colnames(PreSubMortDFCA)[ColIndex] <- "CAMort"
-
-            PreStockMortCARows <- ddply(PreSubMortDFCA, "RunYear",  numcolwise(sum))
-
-            #Finds out years with 0s; add row so a zero gets merged in later
-            for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
-              if(!(j %in% PreStockMortCARows$RunYear)){
-                newrow <- data.frame(RunYear = j, CAMort = 0)
-                PreStockMortCARows <- rbind(PreStockMortCARows, newrow)
+  
+              #Subsets Mortality DF to get stock/only CA fisheries
+              PreSubMortDFCA <- subset(PreMortTab, StockID %in% FRAMStks & as.numeric(FisheryID) > 166 & as.numeric(FisheryID) < 194)
+  
+              #Gets the column number with mortalities in it, renames it to CA Mort
+              ColIndex <- which(colnames(PreSubMortDFCA)=="TotMort" )
+              colnames(PreSubMortDFCA)[ColIndex] <- "CAMort"
+  
+              PreStockMortCARows <- ddply(PreSubMortDFCA, "RunYear",  numcolwise(sum))
+  
+              #Finds out years with 0s; add row so a zero gets merged in later
+              for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
+                if(!(j %in% PreStockMortCARows$RunYear)){
+                  newrow <- data.frame(RunYear = j, CAMort = 0)
+                  PreStockMortCARows <- rbind(PreStockMortCARows, newrow)
+                }
               }
-            }
-
-            #Subsets Mortality DF to get stock/only AK fisheries
-            PreSubMortDFAK <- subset(PreMortTab, StockID %in% FRAMStks & as.numeric(FisheryID) > 193)
-
-            #Gets the column number with mortalities in it, renames it to CA Mort
-            ColIndex <- which(colnames(PreSubMortDFAK)=="TotMort" )
-            colnames(PreSubMortDFAK)[ColIndex] <- "AKMort"
-
-            PreStockMortAKRows <- ddply(PreSubMortDFAK, "RunYear",  numcolwise(sum))
-
-            #Finds out years with 0s; add row so a zero gets merged in later
-            for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
-              if(!(j %in% PreStockMortAKRows$RunYear)){
-                newrow <- data.frame(RunYear = j, AKMort = 0)
-                PreStockMortAKRows <- rbind(PreStockMortAKRows, newrow)
+  
+              #Subsets Mortality DF to get stock/only AK fisheries
+              PreSubMortDFAK <- subset(PreMortTab, StockID %in% FRAMStks & as.numeric(FisheryID) > 193)
+  
+              #Gets the column number with mortalities in it, renames it to CA Mort
+              ColIndex <- which(colnames(PreSubMortDFAK)=="TotMort" )
+              colnames(PreSubMortDFAK)[ColIndex] <- "AKMort"
+  
+              PreStockMortAKRows <- ddply(PreSubMortDFAK, "RunYear",  numcolwise(sum))
+  
+              #Finds out years with 0s; add row so a zero gets merged in later
+              for (j in PreYearList[1]:PreYearList[length(PreYearList)]){
+                if(!(j %in% PreStockMortAKRows$RunYear)){
+                  newrow <- data.frame(RunYear = j, AKMort = 0)
+                  PreStockMortAKRows <- rbind(PreStockMortAKRows, newrow)
+                }
               }
+  
+              #Merge in SUS,CA, AK
+              PreStockMortRows <- merge(PreStockMortRows, PreStockMortSUSRows, by= "RunYear")
+              PreStockMortRows <- merge(PreStockMortRows, PreStockMortCARows, by= "RunYear")
+              PreStockMortRows <- merge(PreStockMortRows, PreStockMortAKRows, by= "RunYear")
+  
+  
+              PreMainMortDF <- rbind(PreMainMortDF, PreStockMortRows)
             }
-
-            #Merge in SUS,CA, AK
-            PreStockMortRows <- merge(PreStockMortRows, PreStockMortSUSRows, by= "RunYear")
-            PreStockMortRows <- merge(PreStockMortRows, PreStockMortCARows, by= "RunYear")
-            PreStockMortRows <- merge(PreStockMortRows, PreStockMortAKRows, by= "RunYear")
-
-
-            PreMainMortDF <- rbind(PreMainMortDF, PreStockMortRows)
 
 
           }
@@ -945,47 +954,53 @@ function(input, output, session){
 
           #Ocean Cohort = Escapement + Mortality
           MainDataDF$OceanCohort <<- MainDataDF$Escapement + MainDataDF$TotMort
-
-          #Merging data frames
-          PreMainDataDF <<- merge(PreMainEscDF, PreMainMortDF, by= c("Stock","RunYear"))
-
-          #Ocean Cohort = Escapement + Mortality
-          PreMainDataDF$OceanCohort <<- PreMainDataDF$Escapement + PreMainDataDF$TotMort
-
+          
           #To get abundance objectives, gets only unique rows for columns 3 to 11
           StockDFOBJ <- unique(StockDF[,3:11])
-
+          
           StockDFOBJ$Stock <- StockDFOBJ$StockName
-
-          PreMainDataDF <<- merge(PreMainDataDF, StockDFOBJ, by = "Stock")
-
-          #Gets the abundance category
-          PreMainDataDF$PreAbund <<- NA
-
-          for (i in 1:nrow(PreMainDataDF)){
-            if(PreMainDataDF$Cap.Meth[i] == "None"){
-              #do nothing - just makes sure that the loop isn't failing as it checks NAs
-            }
-            else if(PreMainDataDF$Cap.Meth[i] == "omu" | PreMainDataDF$Cap.Meth[i] == "imu"){
-               if (PreMainDataDF$LAC[i] > PreMainDataDF$OceanCohort[i]){
-                 PreMainDataDF$PreAbund[i] <<- "(L)"
-               }
-               else if(PreMainDataDF$LAC[i] < PreMainDataDF$OceanCohort[i] & PreMainDataDF$UAC[i] > PreMainDataDF$OceanCohort[i]){
-                 PreMainDataDF$PreAbund[i] <<- "(M)"
-               }
-               else{
-                 PreMainDataDF$PreAbund[i] <<- "(A)"
-               }
-             }
-            #Interior Fraser = always low?
-            else if(PreMainDataDF$Cap.Meth[i] == "fixed"){
-              PreMainDataDF$PreAbund[i] <<- "(L)"
-            }
-          }
-
-          #Gets rid of all the useless columns
+          
           DFDrops <- c("StockName", "LAC", "UAC", "Cap.Meth", "LAMO", "MAMO", "AAMO", "LEG", "UEG", "MU")
-          PreMainDataDF<<- PreMainDataDF[ , !(names(PreMainDataDF) %in% DFDrops)]
+          
+          
+          #Only if Pre-season files are not blank
+          if(PostOnly == FALSE){
+  
+            #Merging data frames
+            PreMainDataDF <<- merge(PreMainEscDF, PreMainMortDF, by= c("Stock","RunYear"))
+  
+            #Ocean Cohort = Escapement + Mortality
+            PreMainDataDF$OceanCohort <<- PreMainDataDF$Escapement + PreMainDataDF$TotMort
+  
+            PreMainDataDF <<- merge(PreMainDataDF, StockDFOBJ, by = "Stock")
+  
+            #Gets the abundance category
+            PreMainDataDF$PreAbund <<- NA
+  
+            for (i in 1:nrow(PreMainDataDF)){
+              if(PreMainDataDF$Cap.Meth[i] == "None"){
+                #do nothing - just makes sure that the loop isn't failing as it checks NAs
+              }
+              else if(PreMainDataDF$Cap.Meth[i] == "omu" | PreMainDataDF$Cap.Meth[i] == "imu"){
+                 if (PreMainDataDF$LAC[i] > PreMainDataDF$OceanCohort[i]){
+                   PreMainDataDF$PreAbund[i] <<- "(L)"
+                 }
+                 else if(PreMainDataDF$LAC[i] < PreMainDataDF$OceanCohort[i] & PreMainDataDF$UAC[i] > PreMainDataDF$OceanCohort[i]){
+                   PreMainDataDF$PreAbund[i] <<- "(M)"
+                 }
+                 else{
+                   PreMainDataDF$PreAbund[i] <<- "(A)"
+                 }
+               }
+              #Interior Fraser = always low?
+              else if(PreMainDataDF$Cap.Meth[i] == "fixed"){
+                PreMainDataDF$PreAbund[i] <<- "(L)"
+              }
+            }
+  
+            #Gets rid of all the useless columns
+            PreMainDataDF<<- PreMainDataDF[ , !(names(PreMainDataDF) %in% DFDrops)]
+          }
 
 
 
@@ -1439,18 +1454,20 @@ function(input, output, session){
           CombinedDFDrops <- c("Escapement", "TotMort", "SUSMort", "CAMort", "AKMort", "OceanCohort")
           CombinedDF<- CombinedDF[ , !(names(CombinedDF) %in% CombinedDFDrops)]
 
-          CombinedDF <- merge(CombinedDF, PreMainDataDF, by = c("Stock", "RunYear"))
-
-          #Converts to ERs for table 8; saves Cohort for table 6
-          CombinedDF$PreUSER <- (CombinedDF$SUSMort + CombinedDF$AKMort)/CombinedDF$OceanCohort
-          CombinedDF$PreCAER <- CombinedDF$CAMort/CombinedDF$OceanCohort
-          CombinedDF$PreTotER <- CombinedDF$TotMort/CombinedDF$OceanCohort
-
-          CombinedDF$PreCohort <- CombinedDF$OceanCohort
-
-          #drop useless columns
-          CombinedDFDrops <- c("Escapement", "TotMort", "SUSMort", "CAMort", "AKMort", "OceanCohort")
-          CombinedDF<- CombinedDF[ , !(names(CombinedDF) %in% CombinedDFDrops)]
+          if(PostOnly == FALSE){
+            CombinedDF <- merge(CombinedDF, PreMainDataDF, by = c("Stock", "RunYear"))
+  
+            #Converts to ERs for table 8; saves Cohort for table 6
+            CombinedDF$PreUSER <- (CombinedDF$SUSMort + CombinedDF$AKMort)/CombinedDF$OceanCohort
+            CombinedDF$PreCAER <- CombinedDF$CAMort/CombinedDF$OceanCohort
+            CombinedDF$PreTotER <- CombinedDF$TotMort/CombinedDF$OceanCohort
+  
+            CombinedDF$PreCohort <- CombinedDF$OceanCohort
+  
+            #drop useless columns
+            CombinedDFDrops <- c("Escapement", "TotMort", "SUSMort", "CAMort", "AKMort", "OceanCohort")
+            CombinedDF<- CombinedDF[ , !(names(CombinedDF) %in% CombinedDFDrops)]
+          }
 
           #To get abundance objectives, gets only unique rows for columns 3 to 11
           StockDFOBJ <- unique(StockDF[,c(1,3)])
@@ -1465,16 +1482,21 @@ function(input, output, session){
 
           #Really table 6.1 is three separate tables, one for each grouping (CA, US Inside, US Outside)
           Tab6DF <- CombinedDF
-
-          #This gets the percent difference, rounded to the nearest tenth, with a percentage symbol added
-          Tab6DF$Difference <- paste(round((Tab6DF$PreCohort - Tab6DF$PostCohort)/Tab6DF$PreCohort, digits = 3) * 100, "%",sep="")
-
+          
+          if(PostOnly == FALSE){
+            #This gets the percent difference, rounded to the nearest tenth, with a percentage symbol added
+            Tab6DF$Difference <- paste(round((Tab6DF$PreCohort - Tab6DF$PostCohort)/Tab6DF$PreCohort, digits = 3) * 100, "%",sep="")
+          }
+          
           #Removes NAs
           Tab6DF[is.na(Tab6DF)] <- ""
 
           #This rounds cohorts, adds in abundances
           Tab6DF$PostCohort <- paste(round(Tab6DF$PostCohort, digits = 0), Tab6DF$PostAbund, sep=" ")
-          Tab6DF$PreCohort <- paste(round(Tab6DF$PreCohort, digits = 0), Tab6DF$PreAbund, sep=" ")
+          
+          if(PostOnly == FALSE){
+            Tab6DF$PreCohort <- paste(round(Tab6DF$PreCohort, digits = 0), Tab6DF$PreAbund, sep=" ")
+          }
 
           #Rename column headers
           ColIndex <- which(colnames(Tab6DF)=="PostCohort" )
@@ -1490,7 +1512,12 @@ function(input, output, session){
           Tab6DF<- Tab6DF[ , !(names(Tab6DF) %in% Tab6DFDrops)]
 
           #Fix column orders
-          Tab6DF <- Tab6DF[,c("Stock", "Catch Year", "Pre-Season", "Post-Season", "Difference")]
+          if(PostOnly == FALSE){
+            Tab6DF <- Tab6DF[,c("Stock", "Catch Year", "Pre-Season", "Post-Season", "Difference")]
+          }
+          if(PostOnly == TRUE){
+            Tab6DF <- Tab6DF[,c("Stock", "Catch Year", "Post-Season")]
+          }
 
           #Changes it to three separate tables, this more closely matches the formatting in the report.
           Tab61DF <<- subset(Tab6DF, Stock %in% c("Lower Fraser", "Interior Fraser", "Georgia Strait ML", "Georgia Strait VI"))
@@ -1498,51 +1525,56 @@ function(input, output, session){
           ColIndex <- which(colnames(Tab61DF)=="Stock" )
           colnames(Tab61DF)[ColIndex] <<- "Management Unit"
 
-          Tab61DFhtml <- kable (Tab61DF, row.names = FALSE) %>%
-            kable_styling("bordered") %>%
-            #group columns by stock
-            collapse_rows(columns = 1)%>%
-            #add header row
-            add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
+          if(PostOnly == FALSE){
+            Tab61DFhtml <- kable (Tab61DF, row.names = FALSE) %>%
+              kable_styling("bordered") %>%
+              #group columns by stock
+              collapse_rows(columns = 1)%>%
+              #add header row
+              add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
+          }
 
           Tab62DF <<- subset(Tab6DF, Stock %in% c("Skagit", "Stillaguamish", "Snohomish", "Hood Canal", "US Strait JDF"))
 
           ColIndex <- which(colnames(Tab62DF)=="Stock" )
           colnames(Tab62DF)[ColIndex] <<- "Management Unit"
 
-          Tab62DFhtml <- kable (Tab62DF, row.names = FALSE) %>%
-            kable_styling("bordered") %>%
-            #group columns by stock
-            collapse_rows(columns = 1)%>%
-            #add header row
-            add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
+          if(PostOnly == FALSE){
+            Tab62DFhtml <- kable (Tab62DF, row.names = FALSE) %>%
+              kable_styling("bordered") %>%
+              #group columns by stock
+              collapse_rows(columns = 1)%>%
+              #add header row
+              add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
+          }
 
           Tab63DF <<- subset(Tab6DF, Stock %in% c("Quillayute", "Hoh", "Queets", "Grays Harbor"))
 
           ColIndex <- which(colnames(Tab63DF)=="Stock" )
           colnames(Tab63DF)[ColIndex] <<- "Management Unit"
-
-          Tab63DFhtml <- kable (Tab63DF, row.names = FALSE) %>%
-            kable_styling("bordered") %>%
-            #group columns by stock
-            collapse_rows(columns = 1)%>%
-            #add header row
-            add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
-
-          #upload tables 6.1, 6.2, 6.3
-          filePath <- file.path(tempdir(), "Table 6.1 html.txt")
-          writeLines(Tab61DFhtml,filePath)
-
-          filePath2 <- file.path(tempdir(), "Table 6.2 html.txt")
-          writeLines(Tab62DFhtml,filePath2)
-
-          filePath3 <- file.path(tempdir(), "Table 6.3 html.txt")
-          writeLines(Tab63DFhtml,filePath3)
-
-          drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
-          drop_upload(filePath2, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
-          drop_upload(filePath3, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
-
+          
+          if(PostOnly == FALSE){
+            Tab63DFhtml <- kable (Tab63DF, row.names = FALSE) %>%
+                kable_styling("bordered") %>%
+                #group columns by stock
+                collapse_rows(columns = 1)%>%
+                #add header row
+                add_header_above(c(" " = 1, " " = 1, "Cohort Abundance (Status of MU)" = 2, " " = 1), bold = T)
+  
+            #upload tables 6.1, 6.2, 6.3
+            filePath <- file.path(tempdir(), "Table 6.1 html.txt")
+            writeLines(Tab61DFhtml,filePath)
+  
+            filePath2 <- file.path(tempdir(), "Table 6.2 html.txt")
+            writeLines(Tab62DFhtml,filePath2)
+  
+            filePath3 <- file.path(tempdir(), "Table 6.3 html.txt")
+            writeLines(Tab63DFhtml,filePath3)
+  
+            drop_upload(filePath, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
+            drop_upload(filePath2, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
+            drop_upload(filePath3, path = "Output/Annual and Periodic Report Tool/Miscellaneous Periodic Report Outputs/")
+          }
           #Now do these tables as CSVs
 
           TabRunInfo <- RunInfo
